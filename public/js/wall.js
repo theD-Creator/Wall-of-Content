@@ -8,10 +8,19 @@
   const viewerBar = $('#viewerBar');
   const rand = (a, b) => a + Math.random() * (b - a);
 
-  const GAP = 14;            // Mindestabstand zwischen Kacheln (deckt auch die leichte Drehung ab)
+  const GAP = 3;             // Kacheln berühren sich fast, bevor sie voneinander abprallen
   const RESTITUTION = 0.9;   // Elastizität der Stöße (1 = perfekt elastisch)
   const MAX_STEP = 1 / 120;  // Physik-Teilschritt in Sekunden
   const PUSH_SPEED = 260;    // max. Geschwindigkeit, mit der Überlappungen aufgelöst werden (px/s)
+
+  // Verbund-Wall (experimentell): ?pos=N -> dieser Bildschirm ist Teil N einer großen Wall,
+  // die Bewegung kommt dann vom Server statt aus der lokalen Physik.
+  const params = new URLSearchParams(location.search);
+  const gridPos = Math.max(0, parseInt(params.get('pos'), 10) || 0);
+  const gridMode = gridPos > 0;
+  let gridInfo = null;
+  if (gridMode) { document.body.classList.add('grid-screen'); document.body.dataset.pos = gridPos; }
+  let gridMissing = 0;
 
   let settings = {};
   let items = [];              // alle Inhalte, die auf der Wall sein dürfen
@@ -53,11 +62,12 @@
   }
 
   class Bubble {
-    constructor(item, fresh) {
+    constructor(item, fresh, geo) {
       this.item = item;
-      Object.assign(this, tileSize(item));
+      Object.assign(this, geo || tileSize(item));
       this.m = this.w * this.h;              // Masse ~ Fläche
-      const spot = freeSpot(this.w, this.h, fresh);
+      this.bump = 0;
+      const spot = geo || freeSpot(this.w, this.h, fresh);
       this.x = spot.x;
       this.y = spot.y;
       const dir = rand(0, Math.PI * 2);
@@ -145,6 +155,7 @@
         // Impuls nur, wenn sich die Kacheln aufeinander zu bewegen
         const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
         if (rv < 0) {
+          if (rv < -6) a.bump = b.bump = performance.now(); // kurzes Aufleuchten beim Zusammenstoß
           const jImp = -(1 + RESTITUTION) * rv / sum;
           a.vx -= jImp * nx * ia; a.vy -= jImp * ny * ia;
           b.vx += jImp * nx * ib; b.vy += jImp * ny * ib;
@@ -153,8 +164,60 @@
     }
   }
 
+  /* ---------------- Verbund-Wall: Positionen vom Server ---------------- */
+  function onGrid(g) {
+    gridInfo = g;
+    const now = performance.now();
+    const byId = new Map(items.map((i) => [i.id, i]));
+    const seen = new Set();
+    let missing = false;
+    for (const [id, x, y, w, h, vx, vy, phase] of g.tiles) {
+      const item = byId.get(id);
+      if (!item) { missing = true; continue; }
+      seen.add(id);
+      let b = bubbles.get(id);
+      if (b && (Math.abs(b.gw - w) > 1 || b.item.thumb !== item.thumb)) { b.el.remove(); bubbles.delete(id); b = null; }
+      if (!b) {
+        b = new Bubble(item, false, { w, h, x, y });
+        b.gw = w;
+        b.dx = x; b.dy = y;
+        bubbles.set(id, b);
+      }
+      Object.assign(b, { sx: x, sy: y, vx, vy, phase, at: now });
+    }
+    for (const [id, b] of bubbles) if (!seen.has(id)) { b.remove(); bubbles.delete(id); }
+    // unbekannte Inhalte nachladen (höchstens alle 3 s)
+    if (missing && now - gridMissing > 3000) { gridMissing = now; refresh(); }
+  }
+
+  function renderGrid(now) {
+    const g = gridInfo;
+    if (!g) return;
+    const scale = Math.min(innerWidth / g.sw, innerHeight / g.sh);
+    const index = Math.min(gridPos, g.cols * g.rows) - 1;
+    const ox = (index % g.cols) * g.sw - (innerWidth / scale - g.sw) / 2;
+    const oy = Math.floor(index / g.cols) * g.sh - (innerHeight / scale - g.sh) / 2;
+    const t = now / 1000;
+    for (const b of bubbles.values()) {
+      // Position zwischen zwei Server-Meldungen weiterrechnen und weich angleichen
+      const age = Math.min(0.5, (now - b.at) / 1000);
+      const px = b.sx + b.vx * age, py = b.sy + b.vy * age;
+      b.dx += (px - b.dx) * 0.25;
+      b.dy += (py - b.dy) * 0.25;
+      const x = (b.dx - b.w / 2 - ox) * scale, y = (b.dy - b.h / 2 - oy) * scale;
+      const w = b.w * scale, h = b.h * scale;
+      const visible = x + w > -40 && x < innerWidth + 40 && y + h > -40 && y < innerHeight + 40;
+      if (b.visible !== visible) { b.visible = visible; b.el.style.display = visible ? '' : 'none'; }
+      if (!visible) continue;
+      if (b.scale !== scale) { b.scale = scale; b.el.style.width = w + 'px'; b.el.style.height = h + 'px'; }
+      const rot = Math.sin(t * 0.5 + b.phase) * 2.5;
+      b.el.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rot}deg)`;
+    }
+  }
+
   let lastT = performance.now();
   function tick(now) {
+    if (gridMode) { renderGrid(now); requestAnimationFrame(tick); return; }
     const elapsed = Math.min(0.1, (now - lastT) / 1000);
     lastT = now;
     const speed = current ? 0.25 : (settings.speed ?? 1);
@@ -166,6 +229,8 @@
     for (const b of list) {
       const rot = Math.sin(t * 0.5 + b.phase) * b.tilt;
       b.el.style.transform = `translate3d(${b.x - b.w / 2}px, ${b.y - b.h / 2}px, 0) rotate(${rot}deg)`;
+      const bumped = now - b.bump < 260;
+      if (bumped !== b.bumped) { b.bumped = bumped; b.el.classList.toggle('bump', bumped); }
     }
     requestAnimationFrame(tick);
   }
@@ -187,6 +252,12 @@
     const known = new Set(items.map((i) => i.id));
     items = data.items;
     const byId = new Map(items.map((i) => [i.id, i]));
+    if (gridMode) {
+      if (current && !byId.has(current.id)) closeViewer();
+      $('#empty').hidden = items.length > 0;
+      loaded = true;
+      return;
+    }
 
     for (const [id, b] of bubbles) {
       const item = byId.get(id);
@@ -213,7 +284,7 @@
 
   // Wenn es mehr Inhalte als Plätze gibt: regelmäßig eine Kachel austauschen (öffnet nichts)
   setInterval(() => {
-    if (current || items.length <= bubbles.size || !bubbles.size) return;
+    if (gridMode || current || items.length <= bubbles.size || !bubbles.size) return;
     const hidden = items.filter((i) => !bubbles.has(i.id));
     const next = hidden[Math.floor(Math.random() * hidden.length)];
     const ids = [...bubbles.keys()];
@@ -231,8 +302,9 @@
     $('#title').textContent = settings.title;
     $('#subtitle').textContent = settings.subtitle;
     document.title = settings.title;
-    if (sizeChanged) { for (const b of bubbles.values()) b.el.remove(); bubbles.clear(); }
+    if (sizeChanged && !gridMode) { for (const b of bubbles.values()) b.el.remove(); bubbles.clear(); }
     renderHunt(state.hunt || {});
+    renderBoard((state.quiz || {}).board);
   }
 
   /* ---------------- Anzeige eines Inhalts (nur nach Klick) ---------------- */
@@ -327,6 +399,16 @@
     requestAnimationFrame(() => requestAnimationFrame(() => box.classList.add('open')));
   }
 
+  /* ---------------- Quiz: Rangliste auf der Wall ---------------- */
+  function renderBoard(board) {
+    const box = $('#board');
+    box.hidden = !board;
+    if (!board) return;
+    $('#boardList').replaceChildren(...(board.length
+      ? board.map((b) => el('li', {}, el('span', { class: 'rank', text: b.rank }), el('b', { text: b.name }), el('span', { class: 'pts', text: b.score })))
+      : [el('li', { class: 'muted', text: 'Noch keine Ergebnisse' })]));
+  }
+
   // Mauszeiger ausblenden, wenn er nicht bewegt wird
   let cursorTimer;
   const wake = () => {
@@ -338,6 +420,7 @@
 
   // Fenstergröße geändert: Kacheln im Bild halten
   addEventListener('resize', () => {
+    if (gridMode) return;
     for (const b of bubbles.values()) {
       b.x = Math.min(Math.max(b.x, b.w / 2), innerWidth - b.w / 2);
       b.y = Math.min(Math.max(b.y, b.h / 2), innerHeight - b.h / 2);
@@ -348,7 +431,9 @@
   async function refresh(highlightId) {
     try { await loadState(); await sync(highlightId); } catch (e) { console.warn(e); }
   }
-  connectEvents('wall', new URLSearchParams(location.search).get('name') || 'Wall', {
+  connectEvents('wall', params.get('name') || (gridMode ? `Verbund ${gridPos}` : 'Wall'), {
+    grid: onGrid,
+    quiz: () => loadState().catch(() => {}),
     items: (d) => refresh(d.added),
     settings: () => refresh(),
     hunt: () => loadState().catch(() => {}),
@@ -361,7 +446,7 @@
         if (item) openViewer(item);
       }
     },
-  });
+  }, gridMode ? { grid: '1' } : {});
   refresh().then(() => requestAnimationFrame(tick));
   wake();
 })();

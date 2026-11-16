@@ -24,17 +24,35 @@
   }
 
   /* ---------------- Anmeldung ---------------- */
-  function showLogin() {
+  let loginUser = null;
+  const avatar = (u, cls = 'avatar') => (u.avatar
+    ? el('img', { class: cls, src: u.avatar, alt: '' })
+    : el('span', { class: cls + ' initials', text: u.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() }));
+  async function showLogin() {
     $('#app').hidden = true;
     $('#login').hidden = false;
-    $('#password').focus();
     if (events) { events.close(); events = null; }
+    const { users } = await api('/api/admin/users');
+    try { loginUser = loginUser || localStorage.getItem('adminUser'); } catch { /* egal */ }
+    if (!users.some((u) => u.id === loginUser)) loginUser = (users.find((u) => u.role === 'global') || users[0]).id;
+    const pick = (id) => {
+      loginUser = id;
+      for (const b of $$('#userPick button')) b.classList.toggle('selected', b.dataset.id === id);
+      $('#loginError').textContent = '';
+      $('#password').focus();
+    };
+    $('#userPick').replaceChildren(...users.map((u) => el('button', {
+      type: 'button', role: 'option', dataset: { id: u.id }, class: u.hasPassword ? '' : 'no-pass',
+      title: u.hasPassword ? '' : 'Noch kein Passwort vergeben', onclick: () => pick(u.id),
+    }, avatar(u), el('span', { text: u.name }), u.role === 'global' && el('small', { text: 'Global Admin' }))));
+    pick(loginUser);
   }
   $('#login').addEventListener('submit', async (e) => {
     e.preventDefault();
     $('#loginError').textContent = '';
     try {
-      await api('/api/admin/login', { method: 'POST', json: { password: $('#password').value } });
+      await api('/api/admin/login', { method: 'POST', json: { userId: loginUser, password: $('#password').value } });
+      try { localStorage.setItem('adminUser', loginUser); } catch { /* egal */ }
       $('#password').value = '';
       start();
     } catch (err) {
@@ -72,7 +90,16 @@
       el('div', {}, el('b', { text: label }), el('a', { href: url, target: '_blank', rel: 'noopener', text: url }), el('small', { class: 'muted', text: hint })));
     $('#urls').replaceChildren(
       urlRow('Wall (großer Bildschirm)', data.urls.wall, 'Im Browser öffnen, Taste F = Vollbild.'),
-      urlRow('Fotostation (Handy/Tablet)', data.urls.station, 'QR-Code mit dem Stations-Handy scannen. Zertifikatswarnung einmalig bestätigen, damit die Kamera funktioniert.'));
+      urlRow('Fotostation (Handy/Tablet)', data.urls.station, 'QR-Code mit dem Stations-Handy scannen. Zertifikatswarnung einmalig bestätigen, damit die Kamera funktioniert.'),
+      urlRow('Quiz (iPad)', data.urls.quiz, 'Zeigt die Wall, bis das Quiz im Tab „Quiz“ gestartet wird.'));
+    const n = data.grid.cols * data.grid.rows;
+    $('#gridLinks').replaceChildren(...Array.from({ length: n }, (_, i) => {
+      const url = `${data.urls.wall}?pos=${i + 1}`;
+      return el('a', { href: url, target: '_blank', rel: 'noopener', title: url },
+        el('img', { src: '/api/admin/qr.svg?text=' + encodeURIComponent(url), alt: '' }), el('span', { text: `Position ${i + 1}` }));
+    }));
+    $('#gridLinks').style.gridTemplateColumns = `repeat(${data.grid.cols}, minmax(0, 110px))`;
+    $('#meChip').replaceChildren(avatar(data.me), el('span', { text: data.me.name }));
     $('#stationsEnabled').checked = data.settings.stationsEnabled;
     renderDevices();
   }
@@ -81,7 +108,7 @@
     const list = data.devices;
     $('#devices').replaceChildren(...(list.length
       ? list.map((d) => el('li', {}, el('span', { class: 'dot' }), el('b', { text: d.name }),
-        el('span', { class: 'muted', text: ` ${d.role === 'wall' ? 'Wall' : 'Fotostation'} · seit ${fmtTime(d.since)}` })))
+        el('span', { class: 'muted', text: ` ${{ wall: 'Wall', quiz: 'Quiz' }[d.role] || 'Fotostation'} · seit ${fmtTime(d.since)}` })))
       : [el('li', { class: 'muted', text: 'Keine Wall und keine Station verbunden.' })]));
   }
 
@@ -150,7 +177,9 @@
     const isBg = kind === 'backgrounds';
     const active = isBg && data.settings.background === a.file;
     return el('div', { class: 'item' + ((isBg ? active : a.enabled) ? ' on' : '') },
-      el('div', { class: 'item-media ' + (isBg ? 'bg' : 'checker') }, el('img', { src: a.url, alt: a.name, loading: 'lazy' })),
+      el('div', { class: 'item-media ' + (isBg ? 'bg' : 'checker') }, /\.(mp4|webm)$/i.test(a.file)
+        ? [el('video', { src: a.url, muted: true, loop: true, autoplay: true, playsInline: true }), el('span', { class: 'tag', text: 'Video' })]
+        : el('img', { src: a.url, alt: a.name, loading: 'lazy' })),
       el('div', { class: 'item-body' },
         el('input', {
           class: 'title-input', value: a.name, maxLength: 60,
@@ -240,6 +269,122 @@
     if (confirm('Neue Runde starten? Alle Teilnehmer, ihre Fotos und der Sieger werden gelöscht.')) {
       call('/api/admin/hunt/reset', { method: 'POST' }).then(() => { toast('Neue Runde gestartet'); load(); });
     }
+  });
+
+  /* ---------------- Quiz ---------------- */
+  const qForm = $('#questionForm');
+  let editingQuestion = null;
+  function renderQuiz() {
+    const q = data.quiz;
+    $('#quizActive').checked = q.active;
+    $('#quizBoard').checked = q.showBoard;
+    const url = data.urls.quiz;
+    $('#quizUrl').replaceChildren(el('div', { class: 'url' },
+      el('img', { src: '/api/admin/qr.svg?text=' + encodeURIComponent(url), alt: 'QR-Code', class: 'url-qr' }),
+      el('div', {}, el('b', { text: 'Adresse für das Quiz-iPad' }), el('a', { href: url, target: '_blank', rel: 'noopener', text: url }))));
+    $('#quizScores').replaceChildren(...(q.scores.length ? q.scores.map((sc) => el('li', {},
+      el('span', { class: 'rank', text: sc.rank }), el('b', { text: sc.name }),
+      el('span', { class: 'muted small', text: `${sc.correct}/${sc.total} richtig · ${fmtTime(sc.at)}` }),
+      el('span', { class: 'pts', text: sc.score }),
+      el('button', {
+        class: 'btn small ghost danger', text: '✕', title: 'Eintrag löschen',
+        onclick: () => call(`/api/admin/quiz/scores/${sc.id}`, { method: 'DELETE' }).then(load),
+      }))) : [el('li', { class: 'muted', text: 'Noch keine Ergebnisse.' })]));
+    $('#questions').replaceChildren(...q.questions.map((qu, i) => el('div', { class: 'question' },
+      el('b', { text: `${i + 1}. ${qu.text}` }),
+      el('ul', {}, qu.answers.map((a, n) => el('li', { class: n === qu.correct ? 'right' : '', text: a }))),
+      el('div', { class: 'row' },
+        el('button', { class: 'btn small', text: 'Bearbeiten', onclick: () => editQuestion(qu) }),
+        el('button', {
+          class: 'btn small danger', text: 'Löschen',
+          onclick: () => confirm('Frage löschen?') && call(`/api/admin/quiz/questions/${qu.id}`, { method: 'DELETE' }).then(load),
+        })))));
+  }
+  function editQuestion(qu) {
+    editingQuestion = qu ? qu.id : null;
+    qForm.reset();
+    if (qu) {
+      qForm.elements.text.value = qu.text;
+      qu.answers.forEach((a, n) => { qForm.elements['a' + n].value = a; });
+      qForm.elements.correct.value = String(qu.correct);
+      qForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    $('#questionFormTitle').textContent = qu ? 'Frage bearbeiten' : 'Neue Frage';
+    $('#questionCancel').hidden = !qu;
+  }
+  $('#questionCancel').addEventListener('click', () => editQuestion(null));
+  qForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const all = [0, 1, 2, 3].map((n) => qForm.elements['a' + n].value.trim());
+    const picked = Number(qForm.elements.correct.value);
+    if (!all[picked]) return toast('Die markierte richtige Antwort ist leer', true);
+    const answers = all.filter(Boolean);
+    const json = { text: qForm.elements.text.value, answers, correct: answers.indexOf(all[picked]) };
+    try {
+      if (editingQuestion) await call(`/api/admin/quiz/questions/${editingQuestion}`, { method: 'PUT', json });
+      else await call('/api/admin/quiz/questions', { method: 'POST', json });
+      editQuestion(null);
+      toast('Frage gespeichert');
+      load();
+    } catch { /* Meldung kommt aus call() */ }
+  });
+  $('#quizActive').addEventListener('change', (e) => call('/api/admin/quiz', { method: 'PUT', json: { active: e.target.checked } }).then(load, load));
+  $('#quizBoard').addEventListener('change', (e) => call('/api/admin/quiz', { method: 'PUT', json: { showBoard: e.target.checked } }).then(load, load));
+  $('#quizReset').addEventListener('click', () => {
+    if (confirm('Die komplette Rangliste löschen?')) call('/api/admin/quiz/reset', { method: 'POST' }).then(load);
+  });
+
+  /* ---------------- Benutzer ---------------- */
+  function renderUsers() {
+    const isGlobal = data.me.role === 'global';
+    $('#userForm').hidden = !isGlobal;
+    $('#users').replaceChildren(...data.users.map((u) => {
+      const mine = u.id === data.me.id;
+      const pw = el('input', { type: 'password', placeholder: 'Neues Passwort (mind. 6 Zeichen)', autocomplete: 'new-password', minLength: 6 });
+      const file = el('input', {
+        type: 'file', accept: 'image/jpeg,image/png,image/webp', hidden: true,
+        onchange: async () => {
+          const f = file.files[0];
+          if (!f) return;
+          try {
+            await call(`/api/admin/users/${u.id}/avatar`, { method: 'PUT', headers: { 'Content-Type': f.type }, body: f });
+            load();
+          } catch { /* Meldung kommt aus call() */ }
+        },
+      });
+      return el('div', { class: 'player user' },
+        el('div', { class: 'player-head' }, avatar(u, 'avatar big'),
+          el('div', {}, el('b', { text: u.name + (mine ? ' (du)' : '') }),
+            el('div', { class: 'muted small', text: u.role === 'global' ? 'Global Admin' : 'Admin' })),
+          el('span', { class: 'status ' + (u.hasPassword ? 'done' : 'running'), text: u.hasPassword ? 'Passwort gesetzt' : 'Kein Passwort' })),
+        isGlobal && !mine && el('form', {
+          class: 'row',
+          onsubmit: async (e) => {
+            e.preventDefault();
+            try {
+              await call(`/api/admin/users/${u.id}`, { method: 'PATCH', json: { password: pw.value } });
+              pw.blur();
+              toast(`Passwort für ${u.name} gespeichert`);
+              load();
+            } catch { /* Meldung kommt aus call() */ }
+          },
+        }, pw, el('button', { class: 'btn small primary', text: 'Festlegen' })),
+        (isGlobal || mine) && el('div', { class: 'row' },
+          el('label', { class: 'btn small' }, 'Profilbild ändern', file),
+          mine && el('span', { class: 'muted small', text: 'Dein Passwort änderst du unter „Einstellungen“.' }),
+          isGlobal && !mine && el('button', {
+            class: 'btn small danger', text: 'Löschen',
+            onclick: () => confirm(`Benutzer „${u.name}“ löschen?`) && call(`/api/admin/users/${u.id}`, { method: 'DELETE' }).then(load),
+          })));
+    }));
+  }
+  $('#userForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await call('/api/admin/users', { method: 'POST', json: { name: e.target.elements.name.value } });
+      e.target.reset();
+      load();
+    } catch { /* Meldung kommt aus call() */ }
   });
 
   /* ---------------- Passwort ---------------- */
@@ -381,7 +526,8 @@
       loading = null;
       data = await call('/api/admin/overview');
       data.loadedAt = Date.now();
-      renderOverview(); renderItems(); renderAssets(); renderSettings(); renderHunt();
+      renderOverview(); renderItems(); renderAssets(); renderSettings(); renderHunt(); renderQuiz();
+      if (!($('#users').contains(document.activeElement) && document.activeElement.tagName === 'INPUT')) renderUsers(); // nicht beim Tippen überschreiben
     }).catch(() => { loading = null; });
     return loading;
   }
@@ -394,7 +540,7 @@
     await load();
     if (events) events.close();
     events = connectEvents('admin', 'Admin', {
-      items: load, settings: load, reconnect: load, hunt: load,
+      items: load, settings: load, reconnect: load, hunt: load, quiz: load,
       devices: (d) => { if (data) { data.devices = d.devices; renderOverview(); } },
     });
   }

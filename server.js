@@ -6,6 +6,7 @@
  *  /admin    Admin-Panel
  *  /p/:id    Download-Seite eines Fotos (Ziel des QR-Codes)
  *  /hunt     Color Hunt (Gäste-Handy)
+ *  /quiz     Quiz (iPad); zeigt die Wall, solange kein Quiz läuft
  */
 const express = require('express');
 const http = require('http');
@@ -32,6 +33,7 @@ const DB_FILE = path.join(DATA, 'db.json');
 const MAX_PHOTO = 12 * 1024 * 1024;
 const MAX_MEDIA = Number(process.env.MAX_UPLOAD_MB || 1024) * 1024 * 1024;
 const MAX_ASSET = 25 * 1024 * 1024;
+const AVATARS = path.join(ASSETS, 'avatars');
 
 const MEDIA_TYPES = {
   'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif',
@@ -39,14 +41,14 @@ const MEDIA_TYPES = {
 };
 const ASSET_TYPES = {
   frames: { 'image/png': '.png', 'image/webp': '.webp', 'image/svg+xml': '.svg', 'image/jpeg': '.jpg' },
-  backgrounds: { 'image/png': '.png', 'image/webp': '.webp', 'image/svg+xml': '.svg', 'image/jpeg': '.jpg' },
+  backgrounds: { 'image/png': '.png', 'image/webp': '.webp', 'image/svg+xml': '.svg', 'image/jpeg': '.jpg', 'video/mp4': '.mp4', 'video/webm': '.webm' },
 };
 const ASSET_EXT = {
   frames: ['.png', '.webp', '.svg', '.jpg', '.jpeg'],
-  backgrounds: ['.png', '.webp', '.svg', '.jpg', '.jpeg'],
+  backgrounds: ['.png', '.webp', '.svg', '.jpg', '.jpeg', '.mp4', '.webm'],
 };
 
-for (const d of [DATA, UPLOADS, MEDIA_DIR, ...Object.values(ASSET_DIRS)]) fs.mkdirSync(d, { recursive: true });
+for (const d of [DATA, UPLOADS, MEDIA_DIR, AVATARS, ...Object.values(ASSET_DIRS)]) fs.mkdirSync(d, { recursive: true });
 
 /* ------------------------------------------------------------------ */
 /* Einstellungen & Datenbank (JSON-Datei)                              */
@@ -72,6 +74,12 @@ const SETTINGS = {
   photoW: { type: 'num', min: 10, max: 100, def: 75.2 },
   photoH: { type: 'num', min: 10, max: 100, def: 85.1 },
   photoRadius: { type: 'num', min: 0, max: 50, def: 3 },
+  quizCount: { type: 'int', min: 3, max: 20, def: 8 },
+  quizSeconds: { type: 'int', min: 5, max: 60, def: 20 },
+  // Verbund-Wall (experimentell): mehrere Bildschirme bilden eine große Wall
+  gridCols: { type: 'int', min: 1, max: 8, def: 3 },
+  gridRows: { type: 'int', min: 1, max: 4, def: 1 },
+  gridAspect: { type: 'enum', values: ['4:3', '16:10', '16:9', '3:4', '9:16'], def: '4:3' },
   huntMinutes: { type: 'int', min: 1, max: 30, def: 5 },
   huntPhotos: { type: 'int', min: 1, max: 10, def: 5 },
   qrTimeout: { type: 'int', min: 10, max: 600, def: 60 },
@@ -87,6 +95,7 @@ function validateSetting(key, value) {
   switch (s.type) {
     case 'string': return typeof value === 'string' ? value.trim().slice(0, s.max) : undefined;
     case 'bool': return typeof value === 'boolean' ? value : undefined;
+    case 'enum': return s.values.includes(value) ? value : undefined;
     case 'int': case 'num': {
       let n = Number(value);
       if (!Number.isFinite(n)) return undefined;
@@ -108,12 +117,34 @@ function validateSetting(key, value) {
 }
 
 const emptyHunt = () => ({ active: false, round: newId(), players: [], winnerId: null, showWinner: false });
-let db = { settings: defaults(), items: [], assets: { frames: {}, backgrounds: {} }, hunt: emptyHunt() };
+const DEFAULT_QUESTIONS = [
+  ['Welche Farbe entsteht, wenn du Blau und Gelb mischst?', ['Grün', 'Lila', 'Orange', 'Braun'], 0],
+  ['Welche Farbe entsteht, wenn du Rot und Gelb mischst?', ['Grün', 'Orange', 'Pink', 'Blau'], 1],
+  ['Wie viele Farben hat ein Regenbogen?', ['3', '5', '7', '10'], 2],
+  ['Womit sprüht man ein Graffiti?', ['Mit einem Pinsel', 'Mit einer Sprühdose', 'Mit Kreide', 'Mit einem Bleistift'], 1],
+  ['Welches Tier kann seine Farbe wechseln?', ['Chamäleon', 'Elefant', 'Pinguin', 'Igel'], 0],
+  ['Wie viele Beine hat eine Spinne?', ['4', '6', '8', '10'], 2],
+  ['Welcher Planet ist der Sonne am nächsten?', ['Erde', 'Mars', 'Merkur', 'Jupiter'], 2],
+  ['Was ist das größte Tier der Welt?', ['Elefant', 'Blauwal', 'Giraffe', 'Hai'], 1],
+  ['Wie viele Minuten hat eine Stunde?', ['30', '60', '90', '100'], 1],
+  ['Welche Form hat ein Stoppschild?', ['Dreieck', 'Kreis', 'Achteck', 'Quadrat'], 2],
+  ['Welche Farbe hat ein Smaragd?', ['Rot', 'Blau', 'Gelb', 'Grün'], 3],
+  ['Was brauchen Pflanzen zum Wachsen?', ['Licht und Wasser', 'Schokolade', 'Musik', 'Sand'], 0],
+  ['Wie heißt ein Bild, das direkt auf eine Hauswand gemalt wird?', ['Wandbild (Mural)', 'Postkarte', 'Poster', 'Fotoalbum'], 0],
+  ['Was ist gefrorenes Wasser?', ['Dampf', 'Eis', 'Nebel', 'Regen'], 1],
+];
+const emptyQuiz = () => ({
+  active: false, showBoard: false, scores: [],
+  questions: DEFAULT_QUESTIONS.map(([text, answers, correct]) => ({ id: newId(), text, answers, correct })),
+});
+let db = { settings: defaults(), items: [], assets: { frames: {}, backgrounds: {} }, hunt: emptyHunt(), quiz: emptyQuiz(), users: [] };
 try {
   const raw = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
   const known = Object.fromEntries(Object.entries(raw.settings || {}).filter(([k]) => Object.hasOwn(SETTINGS, k)));
   db.settings = { ...defaults(), ...known };
   db.hunt = { ...emptyHunt(), ...(raw.hunt || {}) };
+  db.quiz = { ...emptyQuiz(), ...(raw.quiz || {}) };
+  db.users = Array.isArray(raw.users) ? raw.users : [];
   db.items = Array.isArray(raw.items) ? raw.items : [];
   db.assets = { frames: {}, backgrounds: {}, ...(raw.assets || {}) };
 } catch (e) {
@@ -140,19 +171,51 @@ const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', 
 /* ------------------------------------------------------------------ */
 /* Admin-Passwort & Sitzungen                                          */
 /* ------------------------------------------------------------------ */
-let adminPassword = process.env.ADMIN_PASSWORD || '';
-let passwordGenerated = false;
 const pwFile = path.join(DATA, 'admin-password.txt');
-if (!adminPassword) {
-  try { adminPassword = fs.readFileSync(pwFile, 'utf8').trim(); } catch { /* wird erzeugt */ }
-  if (!adminPassword) {
-    adminPassword = crypto.randomBytes(9).toString('base64url');
-    fs.writeFileSync(pwFile, adminPassword + '\n', { mode: 0o600 });
-    passwordGenerated = true;
+const sha = (s) => crypto.createHash('sha256').update(String(s)).digest();
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  return { salt, hash: crypto.scryptSync(String(password), salt, 32).toString('hex') };
+}
+function checkPassword(user, password) {
+  // immer rechnen, damit die Antwortzeit nichts über vorhandene Passwörter verrät
+  const pass = (user && user.pass) || { salt: 'x', hash: '00'.repeat(32) };
+  const got = crypto.scryptSync(String(password ?? ''), pass.salt, 32);
+  return crypto.timingSafeEqual(got, Buffer.from(pass.hash, 'hex')) && !!(user && user.pass);
+}
+
+// Benutzer des Admin-Panels. Der Global Admin verwaltet die anderen und vergibt ihre Passwörter.
+if (!db.users.length) {
+  db.users = [
+    { id: 'david-r', name: 'David R.', role: 'global', avatar: 'david-r.svg', pass: null },
+    { id: 'david-k', name: 'David K.', role: 'admin', avatar: 'david-k.jpg', pass: null },
+    { id: 'emily-b', name: 'Emily B.', role: 'admin', avatar: 'emily-b.jpg', pass: null },
+    { id: 'jakob-k', name: 'Jakob K.', role: 'admin', avatar: 'jakob-k.jpg', pass: null },
+    { id: 'lilian-h', name: 'Lilian H.', role: 'admin', avatar: 'lilian-h.jpg', pass: null },
+  ];
+}
+const globalAdmin = () => db.users.find((u) => u.role === 'global') || db.users[0];
+let startPassword = null; // nur gesetzt, solange das Startpasswort des Global Admins noch gilt
+{
+  const g = globalAdmin();
+  if (process.env.ADMIN_PASSWORD) {
+    g.pass = hashPassword(process.env.ADMIN_PASSWORD); // dient auch als Notfall-Zurücksetzung
+  } else {
+    try { startPassword = fs.readFileSync(pwFile, 'utf8').trim() || null; } catch { /* keins */ }
+    if (!g.pass || (startPassword && !checkPassword(g, startPassword))) {
+      if (!g.pass) {
+        if (!startPassword) {
+          startPassword = crypto.randomBytes(9).toString('base64url');
+          fs.writeFileSync(pwFile, startPassword + '\n', { mode: 0o600 });
+        }
+        g.pass = hashPassword(startPassword);
+      } else {
+        startPassword = null; // Datei ist veraltet
+      }
+    }
   }
 }
-const sha = (s) => crypto.createHash('sha256').update(String(s)).digest();
-const sessions = new Map(); // token -> Ablaufzeit
+const sessions = new Map(); // token -> { userId, exp }
 const SESSION_MS = 12 * 60 * 60 * 1000;
 
 function cookies(req) {
@@ -163,13 +226,18 @@ function cookies(req) {
   }
   return out;
 }
-function isAdmin(req) {
+function currentUser(req) {
   const token = cookies(req).woc_admin;
-  const exp = token && sessions.get(token);
-  if (!exp) return false;
-  if (exp < Date.now()) { sessions.delete(token); return false; }
-  return true;
+  const sess = token && sessions.get(token);
+  if (!sess) return null;
+  if (sess.exp < Date.now()) { sessions.delete(token); return null; }
+  return db.users.find((u) => u.id === sess.userId) || null;
 }
+const isAdmin = (req) => !!currentUser(req);
+const publicUser = (u) => ({
+  id: u.id, name: u.name, role: u.role, hasPassword: !!u.pass,
+  avatar: u.avatar ? `/assets/avatars/${encodeURIComponent(u.avatar)}` : null,
+});
 function sameOrigin(req) {
   const origin = req.headers.origin;
   if (!origin) return true;
@@ -178,7 +246,14 @@ function sameOrigin(req) {
 function requireAdmin(req, res, next) {
   if (!isAdmin(req)) return res.status(401).json({ error: 'Nicht angemeldet' });
   if (req.method !== 'GET' && !sameOrigin(req)) return res.status(403).json({ error: 'Ungültige Herkunft' });
+  req.user = currentUser(req);
   next();
+}
+function requireGlobal(req, res, next) {
+  requireAdmin(req, res, () => {
+    if (req.user.role !== 'global') return res.status(403).json({ error: 'Das darf nur der Global Admin' });
+    next();
+  });
 }
 
 // Einfaches Rate-Limit im Speicher
@@ -192,7 +267,8 @@ function rateLimit(key, max, windowMs) {
 setInterval(() => {
   const now = Date.now();
   for (const [k, b] of buckets) if (b.reset < now) buckets.delete(k);
-  for (const [t, exp] of sessions) if (exp < now) sessions.delete(t);
+  for (const [t, sess] of sessions) if (sess.exp < now) sessions.delete(t);
+  for (const [id, q] of quizSessions) if (q.expires < now) quizSessions.delete(id);
 }, 60_000).unref();
 
 /* ------------------------------------------------------------------ */
@@ -344,6 +420,7 @@ app.get('/wall', page('wall.html'));
 app.get('/station', page('station.html'));
 app.get('/admin', page('admin.html'));
 app.get('/hunt', page('hunt.html'));
+app.get('/quiz', page('quiz.html'));
 
 /* ---------- Öffentliche API ---------- */
 app.get('/api/state', async (_req, res) => {
@@ -354,6 +431,7 @@ app.get('/api/state', async (_req, res) => {
     settings,
     logoUrl: logoUrl(),
     hunt: { active: db.hunt.active, winner: db.hunt.showWinner ? winnerInfo() : null },
+    quiz: { active: db.quiz.active, board: db.quiz.showBoard ? quizBoard(10) : null },
     backgroundUrl: bg ? bg.url : null,
     frames: frames.filter((f) => f.enabled).map(({ file, url, name }) => ({ file, url, name })),
   });
@@ -369,7 +447,7 @@ app.get('/api/wall', (_req, res) => {
 });
 
 app.get('/api/events', (req, res) => {
-  const role = ['wall', 'station', 'admin'].includes(req.query.role) ? req.query.role : 'wall';
+  const role = ['wall', 'station', 'admin', 'quiz'].includes(req.query.role) ? req.query.role : 'wall';
   if (role === 'admin' && !isAdmin(req)) return res.status(401).end();
   if (clients.size >= 300) return res.status(503).end();
   res.writeHead(200, {
@@ -378,12 +456,14 @@ app.get('/api/events', (req, res) => {
   res.write('retry: 3000\n\n');
   const client = {
     res, role, id: newId(), since: Date.now(), ip: req.socket.remoteAddress,
-    name: clean(req.query.name, 40) || (role === 'wall' ? 'Wall' : 'Station'),
+    name: clean(req.query.name, 40) || { wall: 'Wall', quiz: 'Quiz-iPad' }[role] || 'Station',
+    grid: role === 'wall' && req.query.grid === '1',
   };
   clients.add(client);
   send(client, 'hello', {});
   if (role !== 'admin') devicesChanged();
-  req.on('close', () => { clients.delete(client); if (role !== 'admin') devicesChanged(); });
+  gridCheck();
+  req.on('close', () => { clients.delete(client); if (role !== 'admin') devicesChanged(); gridCheck(); });
 });
 
 // Foto von einer Fotostation
@@ -447,41 +527,112 @@ app.get('/p/:id', (req, res) => {
 /* ---------- Admin-API ---------- */
 app.use('/api/admin', express.json({ limit: '100kb' }));
 
+app.get('/api/admin/users', (_req, res) => res.json({ users: db.users.map(publicUser) }));
+
 app.post('/api/admin/login', (req, res) => {
   if (!sameOrigin(req)) return res.status(403).json({ error: 'Ungültige Herkunft' });
   if (!rateLimit('login:' + req.socket.remoteAddress, 10, 10 * 60_000)) {
     return res.status(429).json({ error: 'Zu viele Versuche. Bitte später erneut probieren.' });
   }
-  const ok = crypto.timingSafeEqual(sha(req.body?.password ?? ''), sha(adminPassword));
+  const user = db.users.find((u) => u.id === req.body?.userId);
+  const ok = checkPassword(user, req.body?.password);
+  if (user && !user.pass) return res.status(401).json({ error: 'Für diesen Benutzer wurde noch kein Passwort vergeben. Der Global Admin kann eines festlegen.' });
   if (!ok) return res.status(401).json({ error: 'Falsches Passwort' });
   const token = crypto.randomBytes(32).toString('base64url');
-  sessions.set(token, Date.now() + SESSION_MS);
+  sessions.set(token, { userId: user.id, exp: Date.now() + SESSION_MS });
   res.set('Set-Cookie', `woc_admin=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_MS / 1000}${req.secure ? '; Secure' : ''}`);
-  res.json({ ok: true });
+  res.json({ ok: true, user: publicUser(user) });
 });
 app.post('/api/admin/logout', (req, res) => {
   sessions.delete(cookies(req).woc_admin);
   res.set('Set-Cookie', 'woc_admin=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');
   res.json({ ok: true });
 });
-app.get('/api/admin/me', (req, res) => res.json({ admin: isAdmin(req) }));
+app.get('/api/admin/me', (req, res) => {
+  const user = currentUser(req);
+  res.json({ admin: !!user, user: user ? publicUser(user) : null });
+});
 
-app.post('/api/admin/password', requireAdmin, async (req, res) => {
-  if (process.env.ADMIN_PASSWORD) {
-    return res.status(409).json({ error: 'Das Passwort ist über die Umgebungsvariable ADMIN_PASSWORD festgelegt und kann hier nicht geändert werden.' });
+const validPassword = (pw) => typeof pw === 'string' && pw.length >= 6 && pw.length <= 100;
+function dropSessions(userId, keepToken) {
+  for (const [t, sess] of sessions) if (sess.userId === userId && t !== keepToken) sessions.delete(t);
+}
+function setPassword(user, password) {
+  user.pass = hashPassword(password);
+  if (user === globalAdmin() && startPassword) { // Startpasswort gilt nicht mehr
+    startPassword = null;
+    fs.rmSync(pwFile, { force: true });
   }
+  save();
+}
+
+// Eigenes Passwort ändern
+app.post('/api/admin/password', requireAdmin, (req, res) => {
   if (!rateLimit('pw:' + req.socket.remoteAddress, 10, 10 * 60_000)) return res.status(429).json({ error: 'Zu viele Versuche' });
   const { current, next } = req.body || {};
-  if (!crypto.timingSafeEqual(sha(current ?? ''), sha(adminPassword))) return res.status(403).json({ error: 'Aktuelles Passwort ist falsch' });
-  if (typeof next !== 'string' || next.length < 6 || next.length > 100) {
-    return res.status(400).json({ error: 'Das neue Passwort muss 6 bis 100 Zeichen lang sein' });
-  }
-  if (/[\r\n]/.test(next)) return res.status(400).json({ error: 'Ungültige Zeichen im Passwort' });
-  await fsp.writeFile(pwFile, next + '\n', { mode: 0o600 });
-  adminPassword = next;
-  const keep = cookies(req).woc_admin;
-  for (const t of sessions.keys()) if (t !== keep) sessions.delete(t); // andere Geräte abmelden
+  if (!checkPassword(req.user, current)) return res.status(403).json({ error: 'Aktuelles Passwort ist falsch' });
+  if (!validPassword(next)) return res.status(400).json({ error: 'Das neue Passwort muss 6 bis 100 Zeichen lang sein' });
+  setPassword(req.user, next);
+  dropSessions(req.user.id, cookies(req).woc_admin); // andere Geräte abmelden
   res.json({ ok: true });
+});
+
+// Benutzerverwaltung (nur Global Admin)
+app.post('/api/admin/users', requireGlobal, (req, res) => {
+  const name = clean(req.body?.name, 40);
+  if (name.length < 2) return res.status(400).json({ error: 'Bitte einen Namen angeben' });
+  if (db.users.length >= 50) return res.status(400).json({ error: 'Zu viele Benutzer' });
+  if (db.users.some((u) => u.name.toLowerCase() === name.toLowerCase())) return res.status(409).json({ error: 'Diesen Namen gibt es schon' });
+  const user = { id: newId(), name, role: 'admin', avatar: null, pass: null };
+  db.users.push(user);
+  save();
+  res.status(201).json({ user: publicUser(user) });
+});
+
+app.patch('/api/admin/users/:id', requireGlobal, (req, res) => {
+  const user = db.users.find((u) => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'Benutzer nicht gefunden' });
+  const { name, password, role } = req.body || {};
+  if (password !== undefined && !validPassword(password)) return res.status(400).json({ error: 'Das Passwort muss 6 bis 100 Zeichen lang sein' });
+  if (role !== undefined) {
+    if (!['admin', 'global'].includes(role)) return res.status(400).json({ error: 'Unbekannte Rolle' });
+    if (user.role === 'global' && role !== 'global' && db.users.filter((u) => u.role === 'global').length < 2) {
+      return res.status(409).json({ error: 'Es muss mindestens einen Global Admin geben' });
+    }
+    user.role = role;
+  }
+  if (typeof name === 'string' && clean(name, 40).length >= 2) user.name = clean(name, 40);
+  if (password !== undefined) {
+    setPassword(user, password);
+    dropSessions(user.id, cookies(req).woc_admin);
+  }
+  save();
+  res.json({ user: publicUser(user) });
+});
+
+app.delete('/api/admin/users/:id', requireGlobal, async (req, res) => {
+  const user = db.users.find((u) => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'Benutzer nicht gefunden' });
+  if (user === req.user) return res.status(409).json({ error: 'Du kannst dich nicht selbst löschen' });
+  db.users = db.users.filter((u) => u !== user);
+  dropSessions(user.id);
+  save();
+  res.json({ ok: true });
+});
+
+// Profilbild: der Global Admin für alle, jeder für sich selbst
+app.put('/api/admin/users/:id/avatar', requireAdmin, express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '6mb' }), async (req, res) => {
+  const user = db.users.find((u) => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'Benutzer nicht gefunden' });
+  if (req.user.role !== 'global' && req.user !== user) return res.status(403).json({ error: 'Das darf nur der Global Admin' });
+  const ext = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' }[contentType(req)];
+  if (!ext || !Buffer.isBuffer(req.body) || req.body.length < 50) return res.status(415).json({ error: 'Bitte ein JPG-, PNG- oder WebP-Bild hochladen' });
+  const file = `u-${crypto.randomBytes(6).toString('hex')}${ext}`;
+  await fsp.writeFile(path.join(AVATARS, file), req.body, { flag: 'wx' });
+  if (user.avatar && user.avatar.startsWith('u-')) await fsp.rm(path.join(AVATARS, user.avatar), { force: true });
+  user.avatar = file;
+  save();
+  res.json({ user: publicUser(user) });
 });
 
 app.get('/api/admin/overview', requireAdmin, async (req, res) => {
@@ -494,7 +645,12 @@ app.get('/api/admin/overview', requireAdmin, async (req, res) => {
     frames, backgrounds,
     devices: deviceList(),
     hunt: adminHunt(),
+    quiz: { active: db.quiz.active, showBoard: db.quiz.showBoard, questions: db.quiz.questions, scores: quizBoard(500) },
+    users: db.users.map(publicUser),
+    me: publicUser(req.user),
+    grid: { cols: db.settings.gridCols, rows: db.settings.gridRows },
     urls: {
+      quiz: `http://${host}:${PORT}/quiz`,
       hunt: `${publicBase(req)}/hunt`,
       wall: `http://${host}:${PORT}/`,
       station: HTTPS_PORT ? `https://${host}:${HTTPS_PORT}/station` : `http://${host}:${PORT}/station`,
@@ -597,12 +753,12 @@ app.post('/api/admin/assets/:kind', requireAdmin, assetKind, async (req, res) =>
   const { kind } = req.params;
   const ext = ASSET_TYPES[kind][contentType(req)];
   if (!ext) {
-    return res.status(415).json({ error: kind === 'frames' ? 'Rahmen müssen JPG, PNG, WebP oder SVG sein' : 'Bitte JPG, PNG, WebP oder SVG hochladen' });
+    return res.status(415).json({ error: kind === 'frames' ? 'Rahmen müssen JPG, PNG, WebP oder SVG sein' : 'Bitte JPG, PNG, WebP, SVG oder ein Video (MP4, WebM) hochladen' });
   }
   const base = clean(String(req.query.name || ''), 80).replace(/\.[a-z0-9]+$/i, '').replace(/[^a-zA-Z0-9äöüÄÖÜß_-]+/g, '-').replace(/^-+|-+$/g, '') || kind.slice(0, -1);
   let file = base + ext;
   for (let n = 2; fs.existsSync(path.join(ASSET_DIRS[kind], file)); n++) file = `${base}-${n}${ext}`;
-  await saveStream(req, path.join(ASSET_DIRS[kind], file), MAX_ASSET);
+  await saveStream(req, path.join(ASSET_DIRS[kind], file), ext === '.mp4' || ext === '.webm' ? MAX_MEDIA : MAX_ASSET);
   broadcast('settings');
   res.status(201).json({ file });
 });
@@ -817,6 +973,241 @@ app.post('/api/admin/hunt/reset', requireAdmin, async (_req, res) => {
   res.json({ ok: true });
 });
 
+/* ------------------------------------------------------------------ */
+/* Quiz (iPad)                                                         */
+/* ------------------------------------------------------------------ */
+const quizSessions = new Map(); // id -> laufende Runde (nur im Speicher)
+const quizChanged = () => { save(); broadcast('quiz', {}, ['wall', 'admin', 'quiz']); };
+function quizBoard(limit) {
+  return [...db.quiz.scores]
+    .sort((a, b) => b.score - a.score || a.at - b.at)
+    .slice(0, limit)
+    .map((sc, i) => ({ rank: i + 1, id: sc.id, name: sc.name, score: sc.score, correct: sc.correct, total: sc.total, at: sc.at }));
+}
+const quizQuestion = (sess) => {
+  const q = sess.questions[sess.index];
+  return { n: sess.index + 1, total: sess.questions.length, text: q.text, answers: q.answers, seconds: sess.seconds };
+};
+
+app.use('/api/quiz', express.json({ limit: '10kb' }));
+
+app.get('/api/quiz/state', (_req, res) => {
+  res.json({
+    active: db.quiz.active && db.quiz.questions.length > 0, title: db.settings.title,
+    count: Math.min(db.settings.quizCount, db.quiz.questions.length), seconds: db.settings.quizSeconds, board: quizBoard(10),
+  });
+});
+
+app.post('/api/quiz/start', (req, res) => {
+  if (!db.quiz.active || !db.quiz.questions.length) return res.status(403).json({ error: 'Das Quiz ist gerade nicht geöffnet.' });
+  if (!rateLimit('quiz:' + req.socket.remoteAddress, 60, 10 * 60_000)) return res.status(429).json({ error: 'Bitte kurz warten' });
+  const name = clean(req.body?.name, 20).replace(/\s+/g, ' ');
+  if (name.length < 2) return res.status(400).json({ error: 'Bitte gib deinen Namen ein.' });
+  const pool = [...db.quiz.questions];
+  for (let i = pool.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  const sess = {
+    id: crypto.randomBytes(18).toString('base64url'), name, index: 0, score: 0, correct: 0,
+    questions: pool.slice(0, db.settings.quizCount).map((q) => ({ text: q.text, answers: [...q.answers], correct: q.correct })),
+    seconds: db.settings.quizSeconds, askedAt: Date.now(), expires: Date.now() + 30 * 60_000,
+  };
+  quizSessions.set(sess.id, sess);
+  res.status(201).json({ session: sess.id, question: quizQuestion(sess) });
+});
+
+app.post('/api/quiz/answer', (req, res) => {
+  const sess = quizSessions.get(String(req.body?.session || ''));
+  if (!sess) return res.status(410).json({ error: 'Diese Runde ist abgelaufen. Bitte starte neu.' });
+  const q = sess.questions[sess.index];
+  const elapsed = Math.max(0, Date.now() - sess.askedAt);
+  const limit = sess.seconds * 1000;
+  const answer = Number(req.body?.answer);
+  const correct = answer === q.correct && elapsed <= limit + 2000;
+  const points = correct ? 100 + Math.round(100 * Math.max(0, 1 - elapsed / limit)) : 0;
+  sess.score += points;
+  if (correct) sess.correct++;
+  sess.index++;
+  const out = { correct, correctIndex: q.correct, points, score: sess.score, done: sess.index >= sess.questions.length };
+  if (out.done) {
+    quizSessions.delete(sess.id);
+    const entry = { id: newId(), name: sess.name, score: sess.score, correct: sess.correct, total: sess.questions.length, at: Date.now() };
+    db.quiz.scores.push(entry);
+    if (db.quiz.scores.length > 2000) db.quiz.scores = quizBoard(2000).map(({ rank, ...sc }) => sc);
+    quizChanged();
+    out.result = {
+      name: entry.name, score: entry.score, correct: entry.correct, total: entry.total, id: entry.id,
+      rank: quizBoard(Infinity).find((b) => b.id === entry.id).rank, players: db.quiz.scores.length, board: quizBoard(10),
+    };
+  } else {
+    sess.askedAt = Date.now() + 2500; // die Auflösung wird kurz gezeigt, erst danach läuft die Zeit
+    out.question = quizQuestion(sess);
+  }
+  res.json(out);
+});
+
+app.put('/api/admin/quiz', requireAdmin, (req, res) => {
+  const { active, showBoard } = req.body || {};
+  if (typeof active === 'boolean') db.quiz.active = active;
+  if (typeof showBoard === 'boolean') db.quiz.showBoard = showBoard;
+  quizChanged();
+  res.json({ ok: true });
+});
+
+function parseQuestion(body) {
+  const text = clean(body?.text, 200);
+  const answers = Array.isArray(body?.answers) ? body.answers.map((a) => clean(a, 80)).filter(Boolean) : [];
+  const correct = Number(body?.correct);
+  if (text.length < 3) return { error: 'Bitte eine Frage eingeben' };
+  if (answers.length < 2 || answers.length > 4) return { error: 'Bitte 2 bis 4 Antworten eingeben' };
+  if (!Number.isInteger(correct) || correct < 0 || correct >= answers.length) return { error: 'Bitte die richtige Antwort markieren' };
+  return { text, answers, correct };
+}
+app.post('/api/admin/quiz/questions', requireAdmin, (req, res) => {
+  const q = parseQuestion(req.body);
+  if (q.error) return res.status(400).json(q);
+  if (db.quiz.questions.length >= 300) return res.status(400).json({ error: 'Zu viele Fragen' });
+  db.quiz.questions.push({ id: newId(), ...q });
+  quizChanged();
+  res.status(201).json({ ok: true });
+});
+app.put('/api/admin/quiz/questions/:id', requireAdmin, (req, res) => {
+  const old = db.quiz.questions.find((x) => x.id === req.params.id);
+  if (!old) return res.status(404).json({ error: 'Frage nicht gefunden' });
+  const q = parseQuestion(req.body);
+  if (q.error) return res.status(400).json(q);
+  Object.assign(old, q);
+  quizChanged();
+  res.json({ ok: true });
+});
+app.delete('/api/admin/quiz/questions/:id', requireAdmin, (req, res) => {
+  db.quiz.questions = db.quiz.questions.filter((x) => x.id !== req.params.id);
+  quizChanged();
+  res.json({ ok: true });
+});
+app.delete('/api/admin/quiz/scores/:id', requireAdmin, (req, res) => {
+  db.quiz.scores = db.quiz.scores.filter((x) => x.id !== req.params.id);
+  quizChanged();
+  res.json({ ok: true });
+});
+app.post('/api/admin/quiz/reset', requireAdmin, (_req, res) => {
+  db.quiz.scores = [];
+  quizChanged();
+  res.json({ ok: true });
+});
+
+/* ------------------------------------------------------------------ */
+/* Verbund-Wall (experimentell)                                        */
+/* Mehrere Bildschirme (z. B. iPads nebeneinander) zeigen zusammen     */
+/* eine große Wall. Die Bewegung wird hier auf dem Server berechnet    */
+/* und an alle Bildschirme gesendet, damit Kacheln von einem           */
+/* Bildschirm zum nächsten wandern.                                    */
+/* ------------------------------------------------------------------ */
+const grid = { tiles: new Map(), timer: null, tick: 0, last: 0 };
+const GRID_GAP = 3;
+const gridRand = (a, b) => a + Math.random() * (b - a);
+function gridSize() {
+  const [aw, ah] = db.settings.gridAspect.split(':').map(Number);
+  const sh = 900, sw = Math.round(sh * aw / ah);
+  return { sw, sh, cols: db.settings.gridCols, rows: db.settings.gridRows, W: sw * db.settings.gridCols, H: sh * db.settings.gridRows };
+}
+function gridAdd(item, size) {
+  const ratio = item.ratio || (item.kind === 'photo' ? 9 / 16 : item.kind === 'video' ? 16 / 10 : 1);
+  const base = db.settings.thumbSize * 0.85 * gridRand(0.85, 1.2);
+  const w = base * Math.sqrt(ratio), h = w / ratio;
+  let best = null;
+  for (let i = 0; i < 60; i++) {
+    const x = gridRand(w / 2, size.W - w / 2), y = gridRand(h / 2, size.H - h / 2);
+    let cost = 0;
+    for (const t of grid.tiles.values()) {
+      const px = (w + t.w) / 2 + GRID_GAP - Math.abs(t.x - x), py = (h + t.h) / 2 + GRID_GAP - Math.abs(t.y - y);
+      if (px > 0 && py > 0) cost += Math.min(px, py);
+    }
+    if (!best || cost < best.cost) best = { x, y, cost };
+    if (!cost) break;
+  }
+  const dir = gridRand(0, Math.PI * 2), v = gridRand(16, 32);
+  grid.tiles.set(item.id, { id: item.id, thumbSize: db.settings.thumbSize, x: best.x, y: best.y, w, h, m: w * h, v, vx: Math.cos(dir) * v, vy: Math.sin(dir) * v, phase: gridRand(0, 6.28) });
+}
+function gridSync(size) {
+  const wallItems = db.items.filter((i) => i.onWall);
+  const ids = new Set(wallItems.map((i) => i.id));
+  for (const [id, t] of grid.tiles) if (!ids.has(id) || t.thumbSize !== db.settings.thumbSize) grid.tiles.delete(id);
+  const max = db.settings.wallMaxItems;
+  while (grid.tiles.size > max) grid.tiles.delete(grid.tiles.keys().next().value);
+  const hidden = wallItems.filter((i) => !grid.tiles.has(i.id)).sort(() => Math.random() - 0.5);
+  while (grid.tiles.size < max && hidden.length) gridAdd(hidden.pop(), size);
+  // mehr Inhalte als Plätze: gelegentlich eine Kachel austauschen
+  if (hidden.length && grid.tick % 270 === 0) {
+    const keys = [...grid.tiles.keys()];
+    grid.tiles.delete(keys[Math.floor(Math.random() * keys.length)]);
+    gridAdd(hidden.pop(), size);
+  }
+}
+function gridStep() {
+  const now = Date.now();
+  const dt = Math.min(0.1, (now - grid.last) / 1000);
+  grid.last = now;
+  const size = gridSize();
+  if (grid.tick % 30 === 0) gridSync(size);
+  grid.tick++;
+  const list = [...grid.tiles.values()];
+  const speed = db.settings.speed, t = now / 1000;
+  for (const b of list) {
+    let s = Math.hypot(b.vx, b.vy);
+    if (s < 0.01) { b.vx = 1; b.vy = 0; s = 1; }
+    const target = s + (b.v - s) * Math.min(1, dt * 0.7);
+    const turn = Math.sin(t * 0.23 + b.phase) * 0.12 * dt;
+    const cos = Math.cos(turn), sin = Math.sin(turn);
+    const nx = (b.vx * cos - b.vy * sin) / s, ny = (b.vx * sin + b.vy * cos) / s;
+    b.vx = nx * target; b.vy = ny * target;
+    b.x += b.vx * dt * speed; b.y += b.vy * dt * speed;
+    const mx = b.w / 2 + 4, my = b.h / 2 + 4;
+    if (b.x < mx) { b.x = mx; b.vx = Math.abs(b.vx); }
+    if (b.x > size.W - mx) { b.x = size.W - mx; b.vx = -Math.abs(b.vx); }
+    if (b.y < my) { b.y = my; b.vy = Math.abs(b.vy); }
+    if (b.y > size.H - my) { b.y = size.H - my; b.vy = -Math.abs(b.vy); }
+  }
+  for (let i = 0; i < list.length; i++) {
+    const a = list[i];
+    for (let j = i + 1; j < list.length; j++) {
+      const b = list[j];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const px = (a.w + b.w) / 2 + GRID_GAP - Math.abs(dx);
+      if (px <= 0) continue;
+      const py = (a.h + b.h) / 2 + GRID_GAP - Math.abs(dy);
+      if (py <= 0) continue;
+      let nx = 0, ny = 0, pen;
+      if (px < py) { nx = dx < 0 ? -1 : 1; pen = px; } else { ny = dy < 0 ? -1 : 1; pen = py; }
+      const ia = 1 / a.m, ib = 1 / b.m, sum = ia + ib;
+      const push = Math.min(pen, 260 * dt) / sum;
+      a.x -= nx * push * ia; a.y -= ny * push * ia;
+      b.x += nx * push * ib; b.y += ny * push * ib;
+      const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+      if (rv < 0) {
+        const jImp = -1.9 * rv / sum;
+        a.vx -= jImp * nx * ia; a.vy -= jImp * ny * ia;
+        b.vx += jImp * nx * ib; b.vy += jImp * ny * ib;
+      }
+    }
+  }
+  if (grid.tick % 3 === 0) { // ~10x pro Sekunde senden
+    const r = (n) => Math.round(n * 10) / 10;
+    const data = { ...size, tiles: list.map((b) => [b.id, r(b.x), r(b.y), r(b.w), r(b.h), r(b.vx * speed), r(b.vy * speed), r(b.phase)]) };
+    for (const c of clients) if (c.grid) send(c, 'grid', data);
+  }
+}
+/** Die Berechnung läuft nur, solange mindestens ein Verbund-Bildschirm verbunden ist. */
+function gridCheck() {
+  const needed = [...clients].some((c) => c.grid);
+  if (needed && !grid.timer) {
+    grid.last = Date.now();
+    grid.tick = 0;
+    grid.timer = setInterval(gridStep, 33);
+  } else if (!needed && grid.timer) {
+    clearInterval(grid.timer);
+    grid.timer = null;
+  }
+}
+
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Nicht gefunden' }));
 app.use((_req, res) => res.status(404).type('text').send('Nicht gefunden'));
 // eslint-disable-next-line no-unused-vars
@@ -899,8 +1290,10 @@ async function main() {
   Fotostation (Handy): ${stationUrl}
   Admin-Panel:         http://localhost:${PORT}/admin   (im Netzwerk: http://${ip}:${PORT}/admin)
   Color Hunt (Gäste):  ${db.settings.publicUrl || `http://${ip}:${PORT}`}/hunt
+  Quiz (iPad):         http://${ip}:${PORT}/quiz
 
-  Admin-Passwort:      ${process.env.ADMIN_PASSWORD ? '(aus ADMIN_PASSWORD)' : adminPassword + (passwordGenerated ? `   (neu erzeugt, gespeichert in ${path.relative(ROOT, pwFile)})` : `   (aus ${path.relative(ROOT, pwFile)})`)}
+  Anmeldung im Admin-Panel als ${globalAdmin().name} (Global Admin)
+  Passwort:            ${process.env.ADMIN_PASSWORD ? '(aus ADMIN_PASSWORD)' : startPassword ? `${startPassword}   (Startpasswort, steht auch in ${pwFile.startsWith(ROOT) ? path.relative(ROOT, pwFile) : pwFile})` : '(wurde im Admin-Panel geändert)'}
 ${httpsOk ? '\n  Hinweis: Die Kamera im Handy-Browser funktioniert nur über HTTPS. Beim ersten Öffnen der\n  Fotostation die Zertifikatswarnung einmalig bestätigen ("Erweitert" -> "Trotzdem fortfahren").\n' : ''}`);
 }
 

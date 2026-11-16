@@ -11,6 +11,7 @@
   <form id="login" class="login" hidden>
     <h1>Admin-Panel</h1>
     <p class="muted">Wall of Content</p>
+    <div id="userPick" class="user-pick" role="listbox" aria-label="Benutzer"></div>
     <input id="password" type="password" placeholder="Passwort" autocomplete="current-password" required>
     <button class="btn primary">Anmelden</button>
     <p id="loginError" class="error"></p>
@@ -24,10 +25,13 @@
         <button data-tab="media">Inhalte</button>
         <button data-tab="photos">Fotos <span id="pendingBadge" class="badge" hidden></span></button>
         <button data-tab="hunt">Color Hunt <span id="huntBadge" class="badge" hidden></span></button>
+        <button data-tab="quiz">Quiz</button>
         <button data-tab="frames">Rahmen</button>
         <button data-tab="backgrounds">Hintergründe</button>
+        <button data-tab="users">Benutzer</button>
         <button data-tab="settings">Einstellungen</button>
       </nav>
+      <span id="meChip" class="me-chip"></span>
       <button id="logout" class="btn ghost small">Abmelden</button>
     </header>
 
@@ -51,6 +55,12 @@
               <button class="btn" data-cmd="reload" data-target="station">Stationen neu laden</button>
               <button class="btn" data-cmd="close">Anzeige auf der Wall schließen</button>
             </div>
+          </div>
+          <div class="card">
+            <h2>Verbund-Wall <span class="tag-exp">experimentell</span></h2>
+            <p class="muted small">Mehrere iPads oder Bildschirme nebeneinander bilden eine große Wall – die Kacheln wandern von einem Bildschirm zum nächsten.
+              Öffne auf jedem Gerät den passenden Link (Position 1 = oben links). Anzahl und Format stellst du unter „Einstellungen“ ein.</p>
+            <div id="gridLinks" class="grid-links"></div>
           </div>
         </div>
       </section>
@@ -95,6 +105,44 @@
         <div id="players" class="players"></div>
       </section>
 
+      <section data-panel="quiz" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>Quiz</h2>
+            <label class="switch"><input id="quizActive" type="checkbox"><span></span> Quiz gestartet – das iPad zeigt das Quiz</label>
+            <label class="switch"><input id="quizBoard" type="checkbox"><span></span> Rangliste auf der Wall zeigen</label>
+            <p class="muted small">Solange das Quiz nicht gestartet ist, zeigt das Quiz-iPad die Wall of Content. Fragenanzahl und Zeit pro Frage stellst du unter „Einstellungen“ ein.</p>
+            <div id="quizUrl" class="urls"></div>
+          </div>
+          <div class="card">
+            <div class="row"><h2 style="flex:1">Rangliste</h2><button id="quizReset" class="btn small danger">Rangliste leeren</button></div>
+            <ol id="quizScores" class="score-list"></ol>
+          </div>
+        </div>
+        <form id="questionForm" class="card">
+          <h2 id="questionFormTitle">Neue Frage</h2>
+          <input name="text" maxlength="200" placeholder="Frage" required>
+          <div class="answer-grid">
+            <label><input type="radio" name="correct" value="0" checked><input name="a0" maxlength="80" placeholder="Antwort 1" required></label>
+            <label><input type="radio" name="correct" value="1"><input name="a1" maxlength="80" placeholder="Antwort 2" required></label>
+            <label><input type="radio" name="correct" value="2"><input name="a2" maxlength="80" placeholder="Antwort 3 (optional)"></label>
+            <label><input type="radio" name="correct" value="3"><input name="a3" maxlength="80" placeholder="Antwort 4 (optional)"></label>
+          </div>
+          <p class="muted small">Markiere mit dem Punkt die richtige Antwort.</p>
+          <div class="row"><button class="btn primary">Speichern</button><button type="button" id="questionCancel" class="btn ghost" hidden>Abbrechen</button></div>
+        </form>
+        <div id="questions" class="questions"></div>
+      </section>
+
+      <section data-panel="users" class="panel">
+        <div id="users" class="players"></div>
+        <form id="userForm" class="card" style="max-width:28rem" hidden>
+          <h2>Benutzer hinzufügen</h2>
+          <input name="name" maxlength="40" placeholder="Name, z. B. Anna M." required>
+          <button class="btn primary">Hinzufügen</button>
+        </form>
+      </section>
+
       <section data-panel="frames" class="panel">
         <div class="card">
           <p>Rahmen für die Fotostation, am besten im Hochformat 1080 × 1920 px. <b>Deckende Bilder</b> (JPG/PNG) sind Hintergründe – das Foto wird in das Fotofenster in der Mitte gesetzt. <b>Bilder mit Transparenz</b> (PNG/WebP/SVG) werden über das Foto gelegt. Hochladen oder direkt in den Ordner <code>assets/frames</code> legen.</p>
@@ -105,8 +153,8 @@
 
       <section data-panel="backgrounds" class="panel">
         <div class="card">
-          <p>Hintergrundbild für die Wall und den Startbildschirm der Fotostation (Querformat empfohlen). Ohne Auswahl wird der Standard-Farbverlauf gezeigt. Hochladen oder direkt in den Ordner <code>assets/backgrounds</code> legen.</p>
-          <label class="btn primary">Hintergrund hochladen<input type="file" data-asset="backgrounds" accept="image/png,image/webp,image/svg+xml,image/jpeg" multiple hidden></label>
+          <p>Hintergrund für die Wall und den Startbildschirm der Fotostation (Querformat empfohlen) – ein Bild oder ein <b>animiertes Video</b> (MP4 oder WebM, läuft stumm in Schleife). Ohne Auswahl wird der Standard-Farbverlauf gezeigt. Hochladen oder direkt in den Ordner <code>assets/backgrounds</code> legen.</p>
+          <label class="btn primary">Hintergrund hochladen<input type="file" data-asset="backgrounds" accept="image/png,image/webp,image/svg+xml,image/jpeg,video/mp4,video/webm" multiple hidden></label>
         </div>
         <div id="backgroundsGrid" class="item-grid wide"></div>
       </section>
@@ -140,6 +188,23 @@
             <label>Höhe (%)<input name="photoH" type="number" min="10" max="100" step="0.05"></label>
             <label>Eckenradius (% der Breite)<input name="photoRadius" type="number" min="0" max="50" step="0.1"></label>
           </fieldset>
+          <fieldset><legend>Quiz</legend>
+            <label>Fragen pro Runde<input name="quizCount" type="number" min="3" max="20"></label>
+            <label>Zeit pro Frage (s)<input name="quizSeconds" type="number" min="5" max="60"></label>
+          </fieldset>
+          <fieldset><legend>Verbund-Wall (experimentell)</legend>
+            <label>Bildschirme nebeneinander<input name="gridCols" type="number" min="1" max="8"></label>
+            <label>Bildschirme übereinander<input name="gridRows" type="number" min="1" max="4"></label>
+            <label>Format der Bildschirme
+              <select name="gridAspect">
+                <option value="4:3">4:3 (iPad quer)</option>
+                <option value="3:4">3:4 (iPad hochkant)</option>
+                <option value="16:10">16:10</option>
+                <option value="16:9">16:9 (Fernseher/Monitor)</option>
+                <option value="9:16">9:16 (hochkant)</option>
+              </select>
+            </label>
+          </fieldset>
           <fieldset><legend>Color Hunt</legend>
             <label>Zeit pro Person (Minuten)<input name="huntMinutes" type="number" min="1" max="30"></label>
             <label>Anzahl Fotos<input name="huntPhotos" type="number" min="1" max="10"></label>
@@ -147,7 +212,7 @@
           <div class="row"><button class="btn primary">Speichern</button><span id="settingsSaved" class="muted"></span></div>
         </form>
         <form id="passwordForm" class="card" style="max-width:28rem">
-          <h2>Admin-Passwort ändern</h2>
+          <h2>Mein Passwort ändern</h2>
           <input id="pwCurrent" type="password" placeholder="Aktuelles Passwort" autocomplete="current-password" required>
           <input id="pwNext" type="password" placeholder="Neues Passwort (mind. 6 Zeichen)" autocomplete="new-password" minlength="6" required>
           <input id="pwRepeat" type="password" placeholder="Neues Passwort wiederholen" autocomplete="new-password" minlength="6" required>

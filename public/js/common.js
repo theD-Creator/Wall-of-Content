@@ -36,8 +36,8 @@ async function api(url, options = {}) {
 }
 
 /** Live-Verbindung zum Server; verbindet sich automatisch neu. */
-function connectEvents(role, name, handlers) {
-  const params = new URLSearchParams({ role });
+function connectEvents(role, name, handlers, extra = {}) {
+  const params = new URLSearchParams({ role, ...extra });
   if (name) params.set('name', name);
   const es = new EventSource('/api/events?' + params);
   let first = true;
@@ -45,7 +45,7 @@ function connectEvents(role, name, handlers) {
     if (!first && handlers.reconnect) handlers.reconnect();
     first = false;
   });
-  for (const type of ['items', 'settings', 'devices', 'command', 'hunt']) {
+  for (const type of ['items', 'settings', 'devices', 'command', 'hunt', 'quiz', 'grid']) {
     es.addEventListener(type, (e) => handlers[type] && handlers[type](JSON.parse(e.data)));
   }
   return es;
@@ -55,6 +55,21 @@ function applyTheme(settings, backgroundUrl, logoUrl) {
   for (const img of $$('img.logo')) { img.hidden = !logoUrl; if (logoUrl) img.src = logoUrl; }
   document.documentElement.style.setProperty('--accent', settings.accent || '#7c5cff');
   const bg = $('#bg');
-  if (bg) bg.style.backgroundImage = backgroundUrl ? `url("${backgroundUrl}")` : '';
-  if (bg) bg.classList.toggle('has-image', !!backgroundUrl);
+  if (!bg) return;
+  const isVideo = /\.(mp4|webm)$/i.test(backgroundUrl || '');
+  bg.style.backgroundImage = backgroundUrl && !isVideo ? `url("${backgroundUrl}")` : '';
+  bg.classList.toggle('has-image', !!backgroundUrl);
+  // animiertes Video als Hintergrund
+  let video = $('video', bg);
+  if (!isVideo) { if (video) video.remove(); return; }
+  if (!video) {
+    video = el('video', { muted: true, loop: true, autoplay: true, playsInline: true });
+    video.setAttribute('muted', '');
+    bg.append(video);
+  }
+  if (video.dataset.src !== backgroundUrl) {
+    video.dataset.src = backgroundUrl;
+    video.src = backgroundUrl;
+    video.play().catch(() => {});
+  }
 }

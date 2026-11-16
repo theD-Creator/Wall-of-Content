@@ -140,6 +140,19 @@ body.wall.idle, body.wall.idle * { cursor: none !important; }
 .confetti i { position: absolute; top: -4vh; width: 12px; height: 20px; border-radius: 3px; animation: confetti 5s linear infinite; }
 @keyframes confetti { to { transform: translate(var(--sway, 0), 110vh) rotate(720deg); } }
 
+/* Video-Hintergrund, Stoß-Effekt, Quiz-Rangliste auf der Wall */
+.wall-bg video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.bubble.bump .bubble-inner { border-color: var(--accent); box-shadow: 0 0 34px var(--accent); transition-duration: .05s; }
+.board { position: fixed; right: 3vh; top: 3vh; z-index: 8; width: clamp(240px, 22vw, 420px); padding: 1.1rem 1.2rem; background: #000b; border: 2px solid #ffffff40;
+  border-radius: 20px; backdrop-filter: blur(10px); box-shadow: 0 10px 40px #000a; animation: fade .4s; }
+.board h2 { font-size: clamp(1.1rem, 2.4vh, 1.8rem); margin: 0 0 .6rem; }
+.board ol, .board-list, .score-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
+.board li, .board-list li, .score-list li { display: flex; align-items: center; gap: .7rem; padding: .35rem .5rem; border-radius: 10px; background: #ffffff10; font-size: clamp(.95rem, 2vh, 1.4rem); }
+.rank { flex: none; width: 1.9em; height: 1.9em; display: grid; place-items: center; border-radius: 50%; background: #ffffff22; font-weight: 800; font-size: .85em; }
+li:nth-child(1) > .rank { background: #ffd23f; color: #000; } li:nth-child(2) > .rank { background: #cfd8dc; color: #000; } li:nth-child(3) > .rank { background: #d9925a; color: #000; }
+.board li b, .board-list li b, .score-list li b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pts { font-weight: 800; font-variant-numeric: tabular-nums; }
+
 /* ============================ STATION ============================ */
 body.station { overflow: hidden; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
 .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; gap: 12px;
@@ -210,11 +223,11 @@ body.download { display: grid; place-items: center; padding: 16px; background: r
 /* ============================ ADMIN ============================ */
 body.admin { background: #0e0e19; --bg: #0b0b14; }
 .login { max-width: 20rem; margin: 18vh auto 0; display: flex; flex-direction: column; gap: .8rem; padding: 2rem; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; }
-input:not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]) { font: inherit; color: var(--text); background: #0b0b14; border: 1px solid var(--line); border-radius: 10px; padding: .55em .7em; width: 100%; }
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]) { font: inherit; color: var(--text); background: #0b0b14; border: 1px solid var(--line); border-radius: 10px; padding: .55em .7em; width: 100%; }
 input:focus-visible, button:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .admin-head { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 1rem; padding: .6rem 1rem; background: #0e0e19ee; backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .tabs { display: flex; gap: .2rem; flex: 1; overflow-x: auto; }
-.tabs button { font: inherit; font-weight: 600; color: var(--muted); background: none; border: 0; padding: .55em .9em; border-radius: 10px; cursor: pointer; white-space: nowrap; }
+.tabs button { font: inherit; font-size: .9rem; font-weight: 600; color: var(--muted); background: none; border: 0; padding: .5em .65em; border-radius: 10px; cursor: pointer; white-space: nowrap; }
 .tabs button:hover { color: var(--text); }
 .tabs button.active { color: #fff; background: var(--accent); }
 .badge { background: var(--warn); color: #000; border-radius: 999px; padding: 0 .5em; font-size: .75rem; margin-left: .2em; }
@@ -322,3 +335,70 @@ body.hunt .screen { overflow-y: auto; }
 .status.running { background: var(--warn); color: #000; font-weight: 700; }
 .status.done { background: var(--ok); color: #000; font-weight: 700; }
 .hunt-winner-bar { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+
+/* ============================ QUIZ (iPad) ============================ */
+.wall-frame { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; z-index: 5; background: var(--bg); }
+.quiz-intro { margin: auto; width: 100%; max-width: 1100px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; align-items: center; }
+.quiz-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem; }
+.quiz-hero h1 { font-size: clamp(3rem, 9vw, 6rem); margin: 0; }
+.quiz-hero .btn.big { flex: none; min-width: 14rem; }
+.quiz-board { background: var(--panel2); border: 1px solid #ffffff22; border-radius: 22px; padding: 1.2rem; }
+.quiz-board h2 { margin: 0 0 .8rem; }
+.board-list li.me { background: var(--accent); }
+.quiz-score { font-size: 1.6rem; margin: 0; } .quiz-score b { font-size: 3.4rem; }
+body.quiz .hunt-box input { font-size: 1.8rem !important; }
+.quiz-top { width: 100%; max-width: 1100px; display: flex; justify-content: space-between; flex: none; }
+.quiz-pill { background: #ffffff1c; border-radius: 999px; padding: .4em 1em; font-weight: 700; font-size: 1.1rem; }
+.quiz-timer { width: 100%; max-width: 1100px; height: 14px; border-radius: 99px; background: #ffffff1c; overflow: hidden; flex: none; }
+.quiz-timer i { display: block; height: 100%; width: 100%; background: var(--ok); border-radius: 99px; }
+.quiz-timer i.low { background: var(--bad); }
+.quiz-question { flex: 1; display: grid; place-items: center; text-align: center; font-size: clamp(1.6rem, 4.6vw, 3.4rem); max-width: 1000px; margin: 0; min-height: 0; }
+.quiz-answers { width: 100%; max-width: 1100px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; flex: none; }
+.quiz-answer { display: flex; align-items: center; gap: .8rem; min-height: clamp(84px, 16vh, 170px); padding: 1rem 1.2rem; border: 0; border-radius: 20px; color: #fff; font: inherit; font-weight: 800;
+  font-size: clamp(1.1rem, 2.8vw, 2rem); text-align: left; cursor: pointer; box-shadow: 0 6px 0 #0006; transition: transform .1s, opacity .3s, filter .3s; }
+.quiz-answer:active { transform: translateY(4px); box-shadow: 0 2px 0 #0006; }
+.quiz-answer .shape { flex: none; font-size: 1.3em; opacity: .9; }
+.quiz-answer.a0 { background: #e53935; } .quiz-answer.a1 { background: #1e88e5; } .quiz-answer.a2 { background: #f9a825; } .quiz-answer.a3 { background: #43a047; }
+.quiz-answer.dim { opacity: .3; filter: grayscale(.6); }
+.quiz-answer.right { outline: 6px solid #fff; animation: pulse .6s ease-in-out 2; }
+.quiz-answer.wrong { opacity: .75; outline: 6px solid var(--bad); filter: none; }
+.quiz-feedback { min-height: 2.2rem; margin: 0; font-size: 1.6rem; font-weight: 800; flex: none; }
+.quiz-feedback.good { color: var(--ok); } .quiz-feedback.bad { color: var(--bad); }
+@media (max-width: 560px) { .quiz-answers { grid-template-columns: 1fr; } }
+
+/* Admin: Benutzer, Quiz, Verbund */
+.user-pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: .5rem; }
+.user-pick button { font: inherit; color: var(--text); background: #ffffff0d; border: 2px solid transparent; border-radius: 14px; padding: .6rem .3rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: .3rem; font-size: .82rem; font-weight: 600; }
+.user-pick button.selected { border-color: var(--accent); background: #ffffff1a; }
+.user-pick button.no-pass { opacity: .5; }
+.user-pick small { color: var(--muted); font-weight: 400; font-size: .7rem; }
+.login { max-width: 34rem; }
+.avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: none; background: #333; }
+.avatar.big { width: 64px; height: 64px; }
+.avatar.initials { display: grid; place-items: center; font-weight: 800; background: linear-gradient(135deg, var(--accent), #000a3e); color: #fff; }
+.me-chip { display: flex; align-items: center; gap: .5rem; font-weight: 600; font-size: .9rem; }
+.me-chip .avatar { width: 30px; height: 30px; font-size: .7rem; }
+.user .row { flex-wrap: wrap; }
+.user form.row input { flex: 1; min-width: 10rem; }
+.score-list li { font-size: .95rem; }
+.answer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: .6rem; }
+.answer-grid label { display: flex; align-items: center; gap: .5rem; }
+.answer-grid label input:not([type=radio]) { flex: 1; min-width: 0; }
+.answer-grid input[type=radio] { accent-color: var(--ok); width: 1.2rem; height: 1.2rem; flex: none; }
+.questions { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.question { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: .9rem; display: flex; flex-direction: column; gap: .6rem; }
+.question ul { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: .3rem; font-size: .88rem; }
+.question li { padding: .25em .6em; border-radius: 8px; background: #ffffff10; color: var(--muted); }
+.question li.right { background: color-mix(in srgb, var(--ok) 30%, transparent); color: #fff; font-weight: 700; }
+.tag-exp { font-size: .7rem; font-weight: 700; background: var(--warn); color: #000; border-radius: 999px; padding: .1em .6em; vertical-align: middle; }
+.grid-links { display: grid; gap: .5rem; }
+.grid-links a { display: flex; flex-direction: column; align-items: center; gap: .2rem; font-size: .75rem; text-decoration: none; background: #ffffff10; border-radius: 10px; padding: .4rem; }
+.grid-links img { width: 100%; background: #fff; border-radius: 6px; }
+select { font: inherit; color: var(--text); background: #0b0b14; border: 1px solid var(--line); border-radius: 10px; padding: .55em .7em; }
+
+/* Verbund-Wall: Titel nur auf dem ersten, Logo/QR nur auf einem Bildschirm */
+body.grid-screen:not([data-pos="1"]) .wall-head,
+body.grid-screen:not([data-pos="1"]) .hunt-qr,
+body.grid-screen:not([data-pos="1"]) .board { display: none !important; }
+body.grid-screen:not([data-pos="1"]) .wall-empty { display: none; }
+@media (max-width: 1400px) { .me-chip span { display: none; } }

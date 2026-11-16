@@ -1,5 +1,7 @@
 # Wall of Content
 
+📖 **Ausführliche Anleitung mit Screenshots: [docs/ANLEITUNG.md](docs/ANLEITUNG.md)**
+
 Ein Bildschirm mit schwebenden Thumbnails (Bilder & Videos) – plus Fotostationen fürs Handy und ein Admin-Panel.
 
 | Seite | Adresse | Zweck |
@@ -8,6 +10,8 @@ Ein Bildschirm mit schwebenden Thumbnails (Bilder & Videos) – plus Fotostation
 | **Fotostation** | `https://<laptop-ip>:3443/station` | Handy/Tablet: Start → Rahmen wählen → Foto → QR-Code zum Download. |
 | **Admin-Panel** | `http://<laptop-ip>:3000/admin` | Inhalte, Fotos, Color Hunt, Rahmen, Hintergründe, Einstellungen, Fernsteuerung. |
 | **Color Hunt** | `http://<laptop-ip>:3000/hunt` | Gäste scannen den QR-Code auf der Wall und machen mit dem eigenen Handy mit. |
+| **Quiz** | `http://<laptop-ip>:3000/quiz` | Quiz mit Rangliste für das iPad; zeigt die Wall, solange kein Quiz läuft. |
+| **Verbund-Wall** | `http://<laptop-ip>:3000/?pos=1` … | Experimentell: mehrere iPads nebeneinander bilden eine große Wall. |
 
 ## Starten
 
@@ -19,9 +23,9 @@ npm install
 npm start
 ```
 
-Beim Start zeigt das Terminal alle Adressen und das **Admin-Passwort** an. Es wird beim ersten Start erzeugt und in
-`data/admin-password.txt` gespeichert. Ändern kannst du es im Admin-Panel unter Einstellungen → „Admin-Passwort ändern“
-(oder fest vorgeben mit `ADMIN_PASSWORD=geheim npm start`).
+Beim Start zeigt das Terminal alle Adressen und das **Startpasswort** für **David R.** (Global Admin) an. Es steht auch in
+`data/admin-password.txt`. David R. vergibt im Admin-Panel unter **Benutzer** die Passwörter für David K., Emily B.,
+Jakob K. und Lilian H. Passwort vergessen? `ADMIN_PASSWORD=neuesPasswort npm start` setzt das Passwort des Global Admins.
 
 Voraussetzung: Node.js 18 oder neuer. Laptop, Stations-Handys und die Handys der Gäste müssen im selben WLAN sein.
 
