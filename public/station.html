@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#0b0b14">
+  <meta name="theme-color" content="#000a3e">
   <title>Fotostation</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
@@ -16,10 +16,11 @@
   <section class="screen active" data-screen="start">
     <div class="start-box">
       <div class="camera-icon" aria-hidden="true">📸</div>
+      <p id="stationSub" class="kicker"></p>
       <h1 id="stationTitle">Fotostation</h1>
-      <p id="stationSub" class="muted"></p>
       <button id="startBtn" class="btn primary huge">Start</button>
     </div>
+    <img class="logo station-logo" alt="" hidden>
     <div id="stationName" class="station-name"></div>
   </section>
 
@@ -32,8 +33,8 @@
     </header>
     <div class="preview-wrap">
       <div id="preview" class="preview">
-        <video id="video" playsinline muted autoplay></video>
         <img id="frameOverlay" class="frame-overlay" alt="">
+        <video id="video" playsinline muted autoplay></video>
         <div id="camError" class="cam-error" hidden></div>
         <div id="count" class="count" hidden></div>
         <div id="flash" class="flash"></div>

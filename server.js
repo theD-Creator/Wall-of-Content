@@ -37,11 +37,11 @@ const MEDIA_TYPES = {
   'video/mp4': '.mp4', 'video/webm': '.webm', 'video/quicktime': '.mov',
 };
 const ASSET_TYPES = {
-  frames: { 'image/png': '.png', 'image/webp': '.webp', 'image/svg+xml': '.svg' },
+  frames: { 'image/png': '.png', 'image/webp': '.webp', 'image/svg+xml': '.svg', 'image/jpeg': '.jpg' },
   backgrounds: { 'image/png': '.png', 'image/webp': '.webp', 'image/svg+xml': '.svg', 'image/jpeg': '.jpg' },
 };
 const ASSET_EXT = {
-  frames: ['.png', '.webp', '.svg'],
+  frames: ['.png', '.webp', '.svg', '.jpg', '.jpeg'],
   backgrounds: ['.png', '.webp', '.svg', '.jpg', '.jpeg'],
 };
 
@@ -51,9 +51,9 @@ for (const d of [DATA, UPLOADS, MEDIA_DIR, ...Object.values(ASSET_DIRS)]) fs.mkd
 /* Einstellungen & Datenbank (JSON-Datei)                              */
 /* ------------------------------------------------------------------ */
 const SETTINGS = {
-  title: { type: 'string', max: 80, def: 'Wall of Content' },
+  title: { type: 'string', max: 80, def: 'URBAN ART NIGHT 2026' },
   subtitle: { type: 'string', max: 160, def: 'Mach dein Foto an der Fotostation!' },
-  accent: { type: 'color', def: '#7c5cff' },
+  accent: { type: 'color', def: '#e10b70' },
   background: { type: 'string', max: 200, def: '' },
   wallMaxItems: { type: 'int', min: 1, max: 120, def: 36 },
   thumbSize: { type: 'int', min: 80, max: 480, def: 200 },
@@ -67,6 +67,12 @@ const SETTINGS = {
   countdown: { type: 'int', min: 0, max: 10, def: 3 },
   shareDefault: { type: 'bool', def: false },
   moderation: { type: 'bool', def: false },
+  // Fotofenster bei deckenden Hintergründen (in % der Bildbreite/-höhe), siehe docs/foto-layout.png
+  photoX: { type: 'num', min: 0, max: 90, def: 12.4 },
+  photoY: { type: 'num', min: 0, max: 90, def: 7.45 },
+  photoW: { type: 'num', min: 10, max: 100, def: 75.2 },
+  photoH: { type: 'num', min: 10, max: 100, def: 85.1 },
+  photoRadius: { type: 'num', min: 0, max: 50, def: 3 },
   qrTimeout: { type: 'int', min: 10, max: 600, def: 60 },
   retentionHours: { type: 'int', min: 0, max: 8760, def: 0 },
   publicUrl: { type: 'url', def: '' },
@@ -248,7 +254,7 @@ async function listAssets(kind) {
 
 const itemUrl = (file) => (file ? `/media/${file}` : null);
 const publicItem = (i) => ({
-  id: i.id, kind: i.kind, url: i.asset ? `/assets/media/${encodeURIComponent(i.asset)}` : itemUrl(i.file), thumb: itemUrl(i.thumb), title: i.title || '', createdAt: i.createdAt,
+  id: i.id, kind: i.kind, url: i.asset ? `/assets/media/${encodeURIComponent(i.asset)}` : itemUrl(i.file), thumb: itemUrl(i.thumb), title: i.title || '', createdAt: i.createdAt, ratio: i.ratio || null,
 });
 const adminItem = (i) => ({ ...publicItem(i), onWall: !!i.onWall, shared: i.shared, reviewed: i.reviewed, station: i.station, frame: i.frame });
 
@@ -341,10 +347,16 @@ app.get('/api/state', async (_req, res) => {
   const { publicUrl, ...settings } = db.settings;
   res.json({
     settings,
+    logoUrl: logoUrl(),
     backgroundUrl: bg ? bg.url : null,
     frames: frames.filter((f) => f.enabled).map(({ file, url, name }) => ({ file, url, name })),
   });
 });
+
+function logoUrl() {
+  for (const ext of ['.svg', '.png', '.webp']) if (fs.existsSync(path.join(ASSETS, 'logo' + ext))) return '/assets/logo' + ext;
+  return null;
+}
 
 app.get('/api/wall', (_req, res) => {
   res.json({ items: db.items.filter((i) => i.onWall).map(publicItem) });
@@ -385,6 +397,8 @@ app.post('/api/photos', express.raw({ type: 'image/jpeg', limit: MAX_PHOTO }), a
     shared, reviewed: !db.settings.moderation, onWall: shared && !db.settings.moderation,
     station: clean(req.query.station, 40), frame: clean(req.query.frame, 80),
   };
+  const w = Number(req.query.w), h = Number(req.query.h);
+  if (w > 0 && h > 0) item.ratio = Math.min(4, Math.max(0.25, Math.round(w / h * 1000) / 1000));
   db.items.push(item);
   save();
   broadcast('items', { added: item.onWall ? id : null });
@@ -421,7 +435,7 @@ app.get('/p/:id', (req, res) => {
   res.status(item ? 200 : 404).type('html').send(`<!doctype html>
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex"><title>Dein Foto – ${title}</title><link rel="stylesheet" href="/css/style.css"></head>
-<body class="download" style="--accent:${escapeHtml(db.settings.accent)}"><main class="dl-card"><h1>${title}</h1>${body}</main></body></html>`);
+<body class="download" style="--accent:${escapeHtml(db.settings.accent)}"><main class="dl-card"><h1>${title}</h1>${body}${logoUrl() ? `<img class="logo" src="${logoUrl()}" alt="">` : ''}</main></body></html>`);
 });
 
 /* ---------- Admin-API ---------- */
@@ -557,7 +571,7 @@ app.post('/api/admin/assets/:kind', requireAdmin, assetKind, async (req, res) =>
   const { kind } = req.params;
   const ext = ASSET_TYPES[kind][contentType(req)];
   if (!ext) {
-    return res.status(415).json({ error: kind === 'frames' ? 'Rahmen müssen PNG, WebP oder SVG (mit Transparenz) sein' : 'Bitte JPG, PNG, WebP oder SVG hochladen' });
+    return res.status(415).json({ error: kind === 'frames' ? 'Rahmen müssen JPG, PNG, WebP oder SVG sein' : 'Bitte JPG, PNG, WebP oder SVG hochladen' });
   }
   const base = clean(String(req.query.name || ''), 80).replace(/\.[a-z0-9]+$/i, '').replace(/[^a-zA-Z0-9äöüÄÖÜß_-]+/g, '-').replace(/^-+|-+$/g, '') || kind.slice(0, -1);
   let file = base + ext;

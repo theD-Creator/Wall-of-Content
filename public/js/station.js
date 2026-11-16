@@ -1,7 +1,7 @@
 'use strict';
 /* Fotostation: Start -> Rahmen wählen -> Foto -> Kontrolle -> QR-Code */
 (() => {
-  const DEFAULT_SIZE = { w: 1080, h: 1440 };   // Hochformat 3:4, falls kein Rahmen gewählt ist
+  const DEFAULT_SIZE = { w: 1080, h: 1920 };   // Hochformat 9:16, falls kein Rahmen gewählt ist
   const MAX_SIDE = 1800;
   const IDLE_MS = 90_000;
 
@@ -125,11 +125,47 @@
     return { w: Math.round(w * k), h: Math.round(h * k) };
   }
 
+  /** Deckende Bilder sind Hintergründe (Foto kommt in ein Fenster), transparente liegen über dem Foto. */
+  function isOpaque(img) {
+    try {
+      const c = el('canvas', { width: 9, height: 9 });
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, 9, 9);
+      return ctx.getImageData(4, 4, 1, 1).data[3] > 250;
+    } catch { return false; }
+  }
+  /** Fotofenster in Pixeln für eine Ausgabegröße – oder null, wenn der Rahmen über dem Foto liegt. */
+  function photoWindow(w, h) {
+    if (!frame || !frame.opaque) return null;
+    const x = w * settings.photoX / 100, y = h * settings.photoY / 100;
+    return {
+      x, y,
+      w: Math.min(w - x, w * settings.photoW / 100),
+      h: Math.min(h - y, h * settings.photoH / 100),
+      r: w * settings.photoRadius / 100,
+    };
+  }
+  function layoutPreview() {
+    const size = outputSize(frame && frame.img);
+    const win = photoWindow(size.w, size.h);
+    preview.classList.toggle('windowed', !!win);
+    const st = video.style;
+    if (win) {
+      st.left = (win.x / size.w * 100) + '%';
+      st.top = (win.y / size.h * 100) + '%';
+      st.width = (win.w / size.w * 100) + '%';
+      st.height = (win.h / size.h * 100) + '%';
+      st.borderRadius = `${win.r / win.w * 100}% / ${win.r / win.h * 100}%`;
+    } else {
+      st.left = st.top = '0'; st.width = st.height = '100%'; st.borderRadius = '0';
+    }
+  }
+
   async function selectFrame(f) {
     frame = f;
     for (const b of $$('.frame-thumb')) b.classList.toggle('selected', b.dataset.file === (f ? f.file : ''));
     if (f) {
-      try { f.img = f.img || await loadImage(f.url); } catch { toast('Rahmen konnte nicht geladen werden'); frame = null; }
+      try { f.img = f.img || await loadImage(f.url); f.opaque = isOpaque(f.img); } catch { toast('Rahmen konnte nicht geladen werden'); frame = null; }
     }
     if (frame !== f && f) return selectFrame(null);
     const size = outputSize(frame && frame.img);
@@ -137,6 +173,7 @@
     preview.style.setProperty('--ratio', size.w / size.h);
     overlay.hidden = !frame;
     if (frame) overlay.src = frame.url;
+    layoutPreview();
   }
 
   function renderFrames() {
@@ -157,14 +194,22 @@
     const { w, h } = outputSize(frame && frame.img);
     const canvas = el('canvas', { width: w, height: h });
     const ctx = canvas.getContext('2d');
-    const scale = Math.max(w / sw, h / sh);
+    const win = photoWindow(w, h);
+    const box = win || { x: 0, y: 0, w, h, r: 0 };
+    if (win) ctx.drawImage(frame.img, 0, 0, w, h);
+    const scale = Math.max(box.w / sw, box.h / sh);
     const dw = sw * scale, dh = sh * scale;
     ctx.save();
-    if (mirror) { ctx.translate(w, 0); ctx.scale(-1, 1); }
-    ctx.drawImage(source, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    if (win) {
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(box.x, box.y, box.w, box.h, box.r); else ctx.rect(box.x, box.y, box.w, box.h);
+      ctx.clip();
+    }
+    if (mirror) { ctx.translate(2 * box.x + box.w, 0); ctx.scale(-1, 1); }
+    ctx.drawImage(source, box.x + (box.w - dw) / 2, box.y + (box.h - dh) / 2, dw, dh);
     ctx.restore();
-    if (frame && frame.img) ctx.drawImage(frame.img, 0, 0, w, h);
-    return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Foto konnte nicht erstellt werden'))), 'image/jpeg', 0.9));
+    if (!win && frame && frame.img) ctx.drawImage(frame.img, 0, 0, w, h);
+    return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(Object.assign(b, { w, h })) : reject(new Error('Foto konnte nicht erstellt werden'))), 'image/jpeg', 0.9));
   }
 
   async function shoot() {
@@ -233,7 +278,7 @@
     busy = true;
     $('#busy').hidden = false;
     try {
-      const q = new URLSearchParams({ share: $('#share').checked ? '1' : '0', station: stationName, frame: frame ? frame.name : '' });
+      const q = new URLSearchParams({ share: $('#share').checked ? '1' : '0', station: stationName, frame: frame ? frame.name : '', w: photoBlob.w || '', h: photoBlob.h || '' });
       const data = await api('/api/photos?' + q, { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: photoBlob });
       $('#qrImg').src = data.qr;
       $('#qrPhoto').src = data.url;
@@ -279,7 +324,7 @@
   async function loadState() {
     const state = await api('/api/state');
     settings = state.settings;
-    applyTheme(settings, state.backgroundUrl);
+    applyTheme(settings, state.backgroundUrl, state.logoUrl);
     $('#stationTitle').textContent = settings.stationTitle || 'Fotostation';
     $('#stationSub').textContent = settings.title || '';
     document.title = settings.stationTitle || 'Fotostation';
@@ -288,6 +333,7 @@
       frames = state.frames;
       renderFrames();
     }
+    layoutPreview();
     if (settings.stationsEnabled === false) { if (screen !== 'paused') show('paused'); }
     else if (screen === 'paused') show('start');
   }

@@ -51,7 +51,8 @@ function connectEvents(role, name, handlers) {
   return es;
 }
 
-function applyTheme(settings, backgroundUrl) {
+function applyTheme(settings, backgroundUrl, logoUrl) {
+  for (const img of $$('img.logo')) { img.hidden = !logoUrl; if (logoUrl) img.src = logoUrl; }
   document.documentElement.style.setProperty('--accent', settings.accent || '#7c5cff');
   const bg = $('#bg');
   if (bg) bg.style.backgroundImage = backgroundUrl ? `url("${backgroundUrl}")` : '';

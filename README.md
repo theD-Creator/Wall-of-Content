@@ -37,11 +37,14 @@ Tipp: `…/station?name=Eingang` gibt der Station einen Namen, der im Admin-Pane
 
 Alles in diesen Ordnern wird automatisch verwendet – einfach Dateien hineinkopieren (oder im Admin-Panel hochladen):
 
-| Ordner | Inhalt |
+| Ordner / Datei | Inhalt |
 |---|---|
-| `assets/frames/` | Rahmen für die Fotostation: PNG, WebP oder SVG **mit transparentem Bereich**, am besten Hochformat 3:4 (z. B. 1080 × 1440 px). |
-| `assets/backgrounds/` | Hintergrundbilder für Wall und Fotostation (JPG, PNG, WebP, SVG). Auswahl im Admin-Panel unter „Hintergründe“. |
+| `assets/frames/` | Rahmen für die Fotostation, am besten 1080 × 1920 px. **Deckende Bilder** (JPG/PNG) sind Hintergründe: das Foto wird in das abgerundete Fotofenster gesetzt (Vorlage: `docs/foto-layout.png`). **Bilder mit Transparenz** (PNG/WebP/SVG) werden über das Foto gelegt. |
+| `assets/logo.svg` | Logo auf Wall, Fotostation, Download-Seite und im Admin-Panel (auch `logo.png` / `logo.webp` möglich). |
+| `assets/backgrounds/` | Optionale Hintergrundbilder für die Wall und den Startbildschirm der Station (Querformat). Auswahl im Admin-Panel unter „Hintergründe“. |
 | `assets/media/` | Bilder und Videos (JPG, PNG, WebP, GIF, MP4, WebM, MOV), die automatisch auf der Wall erscheinen. |
+
+Position und Größe des Fotofensters lassen sich im Admin-Panel unter Einstellungen → „Fotofenster“ anpassen.
 
 Fotos der Stationen, Uploads aus dem Admin-Panel und die Einstellungen liegen in `data/` (nicht im Git).
 

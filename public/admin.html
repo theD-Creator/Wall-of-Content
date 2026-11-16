@@ -18,7 +18,7 @@
 
   <div id="app" hidden>
     <header class="admin-head">
-      <strong>Wall of Content</strong>
+      <img class="logo admin-logo" src="/assets/logo.svg" alt=""><strong>Wall of Content</strong>
       <nav id="tabs" class="tabs">
         <button data-tab="overview" class="active">Übersicht</button>
         <button data-tab="media">Inhalte</button>
@@ -76,15 +76,15 @@
 
       <section data-panel="frames" class="panel">
         <div class="card">
-          <p>Rahmen sind Bilder mit transparentem Bereich (PNG, WebP oder SVG), am besten im Hochformat 3:4, z.&nbsp;B. 1080 × 1440 px. Du kannst sie hier hochladen oder direkt in den Ordner <code>assets/frames</code> legen.</p>
-          <label class="btn primary">Rahmen hochladen<input type="file" data-asset="frames" accept="image/png,image/webp,image/svg+xml" multiple hidden></label>
+          <p>Rahmen für die Fotostation, am besten im Hochformat 1080 × 1920 px. <b>Deckende Bilder</b> (JPG/PNG) sind Hintergründe – das Foto wird in das Fotofenster in der Mitte gesetzt. <b>Bilder mit Transparenz</b> (PNG/WebP/SVG) werden über das Foto gelegt. Hochladen oder direkt in den Ordner <code>assets/frames</code> legen.</p>
+          <label class="btn primary">Rahmen hochladen<input type="file" data-asset="frames" accept="image/png,image/webp,image/svg+xml,image/jpeg" multiple hidden></label>
         </div>
         <div id="framesGrid" class="item-grid"></div>
       </section>
 
       <section data-panel="backgrounds" class="panel">
         <div class="card">
-          <p>Hintergrundbild für die Wall und die Fotostation. Hochladen oder direkt in den Ordner <code>assets/backgrounds</code> legen.</p>
+          <p>Hintergrundbild für die Wall und den Startbildschirm der Fotostation (Querformat empfohlen). Ohne Auswahl wird der Standard-Farbverlauf gezeigt. Hochladen oder direkt in den Ordner <code>assets/backgrounds</code> legen.</p>
           <label class="btn primary">Hintergrund hochladen<input type="file" data-asset="backgrounds" accept="image/png,image/webp,image/svg+xml,image/jpeg" multiple hidden></label>
         </div>
         <div id="backgroundsGrid" class="item-grid wide"></div>
@@ -112,6 +112,14 @@
             <label class="switch"><input name="moderation" type="checkbox"><span></span> Fotos erst nach Freigabe im Admin-Panel auf der Wall zeigen</label>
             <label>Fotos automatisch löschen nach Stunden (0 = nie)<input name="retentionHours" type="number" min="0" max="8760"></label>
             <label>Öffentliche Adresse für QR-Codes (leer = automatisch)<input name="publicUrl" type="url" placeholder="http://192.168.1.10:3000"></label>
+          </fieldset>
+          <fieldset><legend>Fotofenster (bei Hintergrund-Rahmen)</legend>
+            <p class="muted small">Position des Fotos auf dem Hintergrund in Prozent, passend zur Vorlage <code>docs/foto-layout.png</code>.</p>
+            <label>Abstand links (%)<input name="photoX" type="number" min="0" max="90" step="0.05"></label>
+            <label>Abstand oben (%)<input name="photoY" type="number" min="0" max="90" step="0.05"></label>
+            <label>Breite (%)<input name="photoW" type="number" min="10" max="100" step="0.05"></label>
+            <label>Höhe (%)<input name="photoH" type="number" min="10" max="100" step="0.05"></label>
+            <label>Eckenradius (% der Breite)<input name="photoRadius" type="number" min="0" max="50" step="0.1"></label>
           </fieldset>
           <div class="row"><button class="btn primary">Speichern</button><span id="settingsSaved" class="muted"></span></div>
         </form>

@@ -21,7 +21,7 @@
       this.item = item;
       const scale = Math.min(innerWidth, innerHeight * 1.6) / 1728;
       const base = (settings.thumbSize || 200) * scale * rand(0.8, 1.25);
-      const ratio = item.kind === 'photo' ? 3 / 4 : item.kind === 'video' ? 16 / 10 : 1;
+      const ratio = item.ratio ? item.ratio : item.kind === 'photo' ? 9 / 16 : item.kind === 'video' ? 16 / 10 : 1;
       this.w = ratio >= 1 ? base * Math.sqrt(ratio) : base * ratio / Math.sqrt(ratio);
       this.h = this.w / ratio;
       this.r = Math.hypot(this.w, this.h) / 2 * 0.8;
@@ -157,7 +157,7 @@
     const state = await api('/api/state');
     const sizeChanged = settings.thumbSize && settings.thumbSize !== state.settings.thumbSize;
     settings = state.settings;
-    applyTheme(settings, state.backgroundUrl);
+    applyTheme(settings, state.backgroundUrl, state.logoUrl);
     $('#title').textContent = settings.title;
     $('#subtitle').textContent = settings.subtitle;
     document.title = settings.title;
