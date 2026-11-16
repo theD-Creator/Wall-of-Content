@@ -6,7 +6,8 @@ Ein Bildschirm mit schwebenden Thumbnails (Bilder & Videos) – plus Fotostation
 |---|---|---|
 | **Wall** | `http://<laptop-ip>:3000/` | Großer Bildschirm. Thumbnails schweben herum, ein Klick/Tipp spielt Bild oder Video ab. |
 | **Fotostation** | `https://<laptop-ip>:3443/station` | Handy/Tablet: Start → Rahmen wählen → Foto → QR-Code zum Download. |
-| **Admin-Panel** | `http://<laptop-ip>:3000/admin` | Inhalte, Fotos, Rahmen, Hintergründe, Einstellungen, Fernsteuerung. |
+| **Admin-Panel** | `http://<laptop-ip>:3000/admin` | Inhalte, Fotos, Color Hunt, Rahmen, Hintergründe, Einstellungen, Fernsteuerung. |
+| **Color Hunt** | `http://<laptop-ip>:3000/hunt` | Gäste scannen den QR-Code auf der Wall und machen mit dem eigenen Handy mit. |
 
 ## Starten
 
@@ -18,8 +19,9 @@ npm install
 npm start
 ```
 
-Beim Start zeigt das Terminal alle Adressen und das **Admin-Passwort** an (wird beim ersten Start erzeugt und in
-`data/admin-password.txt` gespeichert; eigenes Passwort: `ADMIN_PASSWORD=geheim npm start`).
+Beim Start zeigt das Terminal alle Adressen und das **Admin-Passwort** an. Es wird beim ersten Start erzeugt und in
+`data/admin-password.txt` gespeichert. Ändern kannst du es im Admin-Panel unter Einstellungen → „Admin-Passwort ändern“
+(oder fest vorgeben mit `ADMIN_PASSWORD=geheim npm start`).
 
 Voraussetzung: Node.js 18 oder neuer. Laptop, Stations-Handys und die Handys der Gäste müssen im selben WLAN sein.
 
@@ -32,6 +34,19 @@ Voraussetzung: Node.js 18 oder neuer. Laptop, Stations-Handys und die Handys der
 4. Der QR-Code führt zur Download-Seite des Fotos. Nur Fotos mit gesetztem Haken erscheinen auf der Wall.
 
 Tipp: `…/station?name=Eingang` gibt der Station einen Namen, der im Admin-Panel angezeigt wird.
+
+## Color Hunt
+
+1. Im Admin-Panel unter **Color Hunt** den Schalter „Geöffnet“ einschalten – auf der Wall erscheint unten links ein QR-Code.
+2. Gäste scannen den Code mit dem eigenen Handy, geben ihren **Namen** ein und bekommen eine **Farbe**.
+3. Nach einer kurzen **Anleitung** startet mit „Start“ die Zeit (Standard: **5 Minuten**). In der Zeit fotografieren
+   sie **5 Dinge** in ihrer Farbe. Danach wird abgegeben – spätestens automatisch, wenn die Zeit abläuft.
+4. Jede Person kann **nur einmal** mitmachen (pro Handy und pro Name).
+5. Im Admin-Panel siehst du alle Teilnehmer mit ihren Fotos live. Mit **„Als Sieger wählen“** erscheint der Sieger
+   mit Name, Farbe und Fotos groß auf der Wall – bis du ihn wieder ausblendest.
+6. **„Neue Runde“** löscht alle Teilnehmer und Fotos, danach können alle wieder mitmachen.
+
+Zeit und Anzahl der Fotos stellst du unter Einstellungen → „Color Hunt“ ein.
 
 ## Eigene Dateien (Ordner `assets/`)
 
@@ -55,7 +70,8 @@ Fotos der Stationen, Uploads aus dem Admin-Panel und die Einstellungen liegen in
 - **Fotos:** Alle Stations-Fotos; freigeben, von der Wall nehmen, löschen. Fotos ohne Zustimmung des Gastes
   können nicht auf die Wall gelegt werden.
 - **Rahmen / Hintergründe:** hochladen, umbenennen, aktivieren, löschen.
-- **Einstellungen:** Titel, Farbe, Anzahl/Größe/Geschwindigkeit der Kacheln, Automatik, Countdown,
+- **Color Hunt:** öffnen/schließen, Teilnehmer und Fotos live, Sieger wählen und auf der Wall zeigen, neue Runde.
+- **Einstellungen:** Titel, Farbe, Anzahl/Größe/Geschwindigkeit der Kacheln, Countdown, Color-Hunt-Zeit, Passwort,
   Freigabe-Pflicht (Moderation), automatisches Löschen alter Fotos, Adresse für QR-Codes.
 
 ## Konfiguration (Umgebungsvariablen)

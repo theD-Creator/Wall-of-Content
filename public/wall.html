@@ -24,6 +24,20 @@
     </div>
     <button id="viewerClose" class="viewer-close" aria-label="Schließen">✕</button>
   </div>
+  <aside id="huntQr" class="hunt-qr" hidden>
+    <img alt="QR-Code zum Color Hunt">
+    <div><b>COLOR HUNT</b><span>Scannen &amp; mitmachen!</span></div>
+  </aside>
+
+  <div id="winner" class="winner" hidden>
+    <div id="confetti" class="confetti"></div>
+    <div class="winner-card">
+      <div class="winner-kicker">🏆 Sieger im Color Hunt</div>
+      <h2 id="winnerName"></h2>
+      <div class="winner-color"><i></i><span id="winnerColor"></span></div>
+      <div id="winnerPhotos" class="winner-photos"></div>
+    </div>
+  </div>
   <script src="/js/common.js"></script>
   <script src="/js/wall.js"></script>
 </body>

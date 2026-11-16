@@ -45,7 +45,7 @@ function connectEvents(role, name, handlers) {
     if (!first && handlers.reconnect) handlers.reconnect();
     first = false;
   });
-  for (const type of ['items', 'settings', 'devices', 'command']) {
+  for (const type of ['items', 'settings', 'devices', 'command', 'hunt']) {
     es.addEventListener(type, (e) => handlers[type] && handlers[type](JSON.parse(e.data)));
   }
   return es;

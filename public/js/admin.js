@@ -177,6 +177,82 @@
     }
   }
 
+  /* ---------------- Color Hunt ---------------- */
+  const STATUS = { ready: 'Noch nicht gestartet', running: 'Läuft', done: 'Abgegeben' };
+  function renderHunt() {
+    const h = data.hunt;
+    $('#huntActive').checked = h.active;
+    const running = h.players.filter((p) => p.status === 'running').length;
+    $('#huntBadge').hidden = !h.players.length;
+    $('#huntBadge').textContent = running ? `${running} aktiv` : h.players.length;
+
+    const winner = h.players.find((p) => p.id === h.winnerId);
+    $('#huntWinner').replaceChildren(...(winner ? [
+      el('span', { class: 'swatch', style: `background:${winner.color.hex}` }),
+      el('b', { text: winner.name }),
+      el('button', {
+        class: 'btn small' + (h.showWinner ? '' : ' primary'), text: h.showWinner ? 'Auf der Wall ausblenden' : 'Auf der Wall zeigen',
+        onclick: () => call('/api/admin/hunt', { method: 'PUT', json: { showWinner: !h.showWinner } }).then(load),
+      }),
+      el('button', { class: 'btn small ghost', text: 'Auswahl aufheben', onclick: () => call('/api/admin/hunt', { method: 'PUT', json: { winnerId: null } }).then(load) }),
+    ] : [el('span', { class: 'muted', text: 'Noch kein Sieger gewählt. Klicke bei einem Teilnehmer auf „Als Sieger wählen“ – er wird sofort auf der Wall gezeigt.' })]));
+
+    const url = data.urls.hunt;
+    $('#huntUrl').replaceChildren(el('div', { class: 'url' },
+      el('img', { src: '/api/admin/qr.svg?text=' + encodeURIComponent(url), alt: 'QR-Code', class: 'url-qr' }),
+      el('div', {}, el('b', { text: 'Teilnahme-Link' }), el('a', { href: url, target: '_blank', rel: 'noopener', text: url }))));
+
+    $('#players').replaceChildren(...(h.players.length ? h.players.map((p) => el('div', { class: 'player' + (p.id === h.winnerId ? ' winner-pick' : '') },
+      el('div', { class: 'player-head' },
+        el('span', { class: 'swatch', style: `background:${p.color.hex}` }),
+        el('div', {}, el('b', { text: p.name }), el('div', { class: 'muted small', text: `${p.color.name} · ${fmtTime(p.joinedAt)}` })),
+        el('span', { class: 'status ' + p.status, dataset: p.status === 'running' ? { deadline: p.deadline } : {}, text: STATUS[p.status] })),
+      el('div', { class: 'player-photos' }, p.photos.map((src) => (src
+        ? el('a', { href: src, target: '_blank', rel: 'noopener' }, el('img', { src, alt: '', loading: 'lazy' }))
+        : el('span')))),
+      el('div', { class: 'row' },
+        el('span', { class: 'muted small', text: `${p.photos.filter(Boolean).length}/${p.photos.length} Fotos` }),
+        el('span', { style: 'flex:1' }),
+        p.id !== h.winnerId && el('button', {
+          class: 'btn small primary', text: '🏆 Als Sieger wählen',
+          onclick: () => call('/api/admin/hunt', { method: 'PUT', json: { winnerId: p.id } }).then(() => { toast(`${p.name} wird auf der Wall gezeigt`); load(); }),
+        }),
+        el('button', {
+          class: 'btn small danger', text: 'Löschen',
+          onclick: () => confirm(`Teilnahme von „${p.name}“ löschen?`) && call(`/api/admin/hunt/players/${p.id}`, { method: 'DELETE' }).then(load),
+        }))))
+      : [el('p', { class: 'muted', text: 'Noch keine Teilnehmer.' })]));
+    updateCountdowns();
+  }
+  function updateCountdowns() {
+    if (!data) return;
+    const skew = data.hunt.now - (data.loadedAt || Date.now());
+    for (const s of $$('.status[data-deadline]')) {
+      const left = Math.max(0, Math.ceil((Number(s.dataset.deadline) - Date.now() - skew) / 1000));
+      s.textContent = left ? `Läuft · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : 'Zeit abgelaufen';
+    }
+  }
+  setInterval(updateCountdowns, 1000);
+  $('#huntActive').addEventListener('change', (e) => {
+    call('/api/admin/hunt', { method: 'PUT', json: { active: e.target.checked } }).then(load, load);
+  });
+  $('#huntReset').addEventListener('click', () => {
+    if (confirm('Neue Runde starten? Alle Teilnehmer, ihre Fotos und der Sieger werden gelöscht.')) {
+      call('/api/admin/hunt/reset', { method: 'POST' }).then(() => { toast('Neue Runde gestartet'); load(); });
+    }
+  });
+
+  /* ---------------- Passwort ---------------- */
+  $('#passwordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if ($('#pwNext').value !== $('#pwRepeat').value) return toast('Die neuen Passwörter stimmen nicht überein', true);
+    try {
+      await call('/api/admin/password', { method: 'POST', json: { current: $('#pwCurrent').value, next: $('#pwNext').value } });
+      e.target.reset();
+      toast('Passwort geändert');
+    } catch { /* Meldung kommt aus call() */ }
+  });
+
   /* ---------------- Einstellungen ---------------- */
   const form = $('#settingsForm');
   function renderSettings() {
@@ -304,7 +380,8 @@
     loading = loading || new Promise((r) => setTimeout(r, 80)).then(async () => {
       loading = null;
       data = await call('/api/admin/overview');
-      renderOverview(); renderItems(); renderAssets(); renderSettings();
+      data.loadedAt = Date.now();
+      renderOverview(); renderItems(); renderAssets(); renderSettings(); renderHunt();
     }).catch(() => { loading = null; });
     return loading;
   }
@@ -317,7 +394,7 @@
     await load();
     if (events) events.close();
     events = connectEvents('admin', 'Admin', {
-      items: load, settings: load, reconnect: load,
+      items: load, settings: load, reconnect: load, hunt: load,
       devices: (d) => { if (data) { data.devices = d.devices; renderOverview(); } },
     });
   }

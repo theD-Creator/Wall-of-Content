@@ -5,6 +5,7 @@
  *  /station  Fotostation (Handy)
  *  /admin    Admin-Panel
  *  /p/:id    Download-Seite eines Fotos (Ziel des QR-Codes)
+ *  /hunt     Color Hunt (Gäste-Handy)
  */
 const express = require('express');
 const http = require('http');
@@ -59,8 +60,6 @@ const SETTINGS = {
   thumbSize: { type: 'int', min: 80, max: 480, def: 200 },
   speed: { type: 'num', min: 0, max: 5, def: 1 },
   imageDuration: { type: 'int', min: 2, max: 120, def: 8 },
-  autoplay: { type: 'bool', def: true },
-  autoplayIdle: { type: 'int', min: 5, max: 3600, def: 25 },
   videoSound: { type: 'bool', def: true },
   stationTitle: { type: 'string', max: 80, def: 'Fotostation' },
   stationsEnabled: { type: 'bool', def: true },
@@ -73,10 +72,13 @@ const SETTINGS = {
   photoW: { type: 'num', min: 10, max: 100, def: 75.2 },
   photoH: { type: 'num', min: 10, max: 100, def: 85.1 },
   photoRadius: { type: 'num', min: 0, max: 50, def: 3 },
+  huntMinutes: { type: 'int', min: 1, max: 30, def: 5 },
+  huntPhotos: { type: 'int', min: 1, max: 10, def: 5 },
   qrTimeout: { type: 'int', min: 10, max: 600, def: 60 },
   retentionHours: { type: 'int', min: 0, max: 8760, def: 0 },
   publicUrl: { type: 'url', def: '' },
 };
+const newId = () => crypto.randomBytes(9).toString('base64url');
 const defaults = () => Object.fromEntries(Object.entries(SETTINGS).map(([k, s]) => [k, s.def]));
 
 function validateSetting(key, value) {
@@ -105,10 +107,13 @@ function validateSetting(key, value) {
   return undefined;
 }
 
-let db = { settings: defaults(), items: [], assets: { frames: {}, backgrounds: {} } };
+const emptyHunt = () => ({ active: false, round: newId(), players: [], winnerId: null, showWinner: false });
+let db = { settings: defaults(), items: [], assets: { frames: {}, backgrounds: {} }, hunt: emptyHunt() };
 try {
   const raw = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-  db.settings = { ...defaults(), ...(raw.settings || {}) };
+  const known = Object.fromEntries(Object.entries(raw.settings || {}).filter(([k]) => Object.hasOwn(SETTINGS, k)));
+  db.settings = { ...defaults(), ...known };
+  db.hunt = { ...emptyHunt(), ...(raw.hunt || {}) };
   db.items = Array.isArray(raw.items) ? raw.items : [];
   db.assets = { frames: {}, backgrounds: {}, ...(raw.assets || {}) };
 } catch (e) {
@@ -129,7 +134,6 @@ function save() {
   }, 150);
 }
 
-const newId = () => crypto.randomBytes(9).toString('base64url');
 const clean = (v, max = 60) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max) : '');
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -138,8 +142,8 @@ const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', 
 /* ------------------------------------------------------------------ */
 let adminPassword = process.env.ADMIN_PASSWORD || '';
 let passwordGenerated = false;
+const pwFile = path.join(DATA, 'admin-password.txt');
 if (!adminPassword) {
-  const pwFile = path.join(DATA, 'admin-password.txt');
   try { adminPassword = fs.readFileSync(pwFile, 'utf8').trim(); } catch { /* wird erzeugt */ }
   if (!adminPassword) {
     adminPassword = crypto.randomBytes(9).toString('base64url');
@@ -339,6 +343,7 @@ app.get('/', page('wall.html'));
 app.get('/wall', page('wall.html'));
 app.get('/station', page('station.html'));
 app.get('/admin', page('admin.html'));
+app.get('/hunt', page('hunt.html'));
 
 /* ---------- Öffentliche API ---------- */
 app.get('/api/state', async (_req, res) => {
@@ -348,6 +353,7 @@ app.get('/api/state', async (_req, res) => {
   res.json({
     settings,
     logoUrl: logoUrl(),
+    hunt: { active: db.hunt.active, winner: db.hunt.showWinner ? winnerInfo() : null },
     backgroundUrl: bg ? bg.url : null,
     frames: frames.filter((f) => f.enabled).map(({ file, url, name }) => ({ file, url, name })),
   });
@@ -460,6 +466,24 @@ app.post('/api/admin/logout', (req, res) => {
 });
 app.get('/api/admin/me', (req, res) => res.json({ admin: isAdmin(req) }));
 
+app.post('/api/admin/password', requireAdmin, async (req, res) => {
+  if (process.env.ADMIN_PASSWORD) {
+    return res.status(409).json({ error: 'Das Passwort ist über die Umgebungsvariable ADMIN_PASSWORD festgelegt und kann hier nicht geändert werden.' });
+  }
+  if (!rateLimit('pw:' + req.socket.remoteAddress, 10, 10 * 60_000)) return res.status(429).json({ error: 'Zu viele Versuche' });
+  const { current, next } = req.body || {};
+  if (!crypto.timingSafeEqual(sha(current ?? ''), sha(adminPassword))) return res.status(403).json({ error: 'Aktuelles Passwort ist falsch' });
+  if (typeof next !== 'string' || next.length < 6 || next.length > 100) {
+    return res.status(400).json({ error: 'Das neue Passwort muss 6 bis 100 Zeichen lang sein' });
+  }
+  if (/[\r\n]/.test(next)) return res.status(400).json({ error: 'Ungültige Zeichen im Passwort' });
+  await fsp.writeFile(pwFile, next + '\n', { mode: 0o600 });
+  adminPassword = next;
+  const keep = cookies(req).woc_admin;
+  for (const t of sessions.keys()) if (t !== keep) sessions.delete(t); // andere Geräte abmelden
+  res.json({ ok: true });
+});
+
 app.get('/api/admin/overview', requireAdmin, async (req, res) => {
   await syncMediaFolder();
   const [frames, backgrounds] = await Promise.all([listAssets('frames'), listAssets('backgrounds')]);
@@ -469,7 +493,9 @@ app.get('/api/admin/overview', requireAdmin, async (req, res) => {
     items: db.items.map(adminItem).sort((a, b) => b.createdAt - a.createdAt),
     frames, backgrounds,
     devices: deviceList(),
+    hunt: adminHunt(),
     urls: {
+      hunt: `${publicBase(req)}/hunt`,
       wall: `http://${host}:${PORT}/`,
       station: HTTPS_PORT ? `https://${host}:${HTTPS_PORT}/station` : `http://${host}:${PORT}/station`,
       download: publicBase(req),
@@ -619,6 +645,178 @@ app.post('/api/admin/command', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+/* ------------------------------------------------------------------ */
+/* Color Hunt                                                          */
+/* ------------------------------------------------------------------ */
+const HUNT_COLORS = [
+  { name: 'Rot', hex: '#e53935' }, { name: 'Orange', hex: '#fb8c00' }, { name: 'Gelb', hex: '#fdd835' },
+  { name: 'Grün', hex: '#43a047' }, { name: 'Blau', hex: '#1e88e5' }, { name: 'Lila', hex: '#8e24aa' },
+  { name: 'Pink', hex: '#ec407a' }, { name: 'Türkis', hex: '#00acc1' }, { name: 'Braun', hex: '#795548' },
+  { name: 'Weiß', hex: '#ffffff' }, { name: 'Schwarz', hex: '#212121' }, { name: 'Grau', hex: '#9e9e9e' },
+];
+const HUNT_GRACE_MS = 20_000; // Puffer für Uploads, die kurz vor Ablauf gestartet wurden
+
+const huntPhotoUrls = (p) => p.photos.map((f) => itemUrl(f));
+function huntStatus(p, now = Date.now()) {
+  if (p.finishedAt) return 'done';
+  if (!p.startedAt) return 'ready';
+  return now > p.deadline ? 'done' : 'running';
+}
+function winnerInfo() {
+  const p = db.hunt.players.find((x) => x.id === db.hunt.winnerId);
+  return p ? { id: p.id, name: p.name, color: p.color, photos: huntPhotoUrls(p).filter(Boolean) } : null;
+}
+function adminHunt() {
+  const now = Date.now();
+  return {
+    active: db.hunt.active, winnerId: db.hunt.winnerId, showWinner: db.hunt.showWinner, now,
+    players: db.hunt.players.map((p) => ({
+      id: p.id, name: p.name, color: p.color, joinedAt: p.joinedAt, startedAt: p.startedAt, deadline: p.deadline,
+      finishedAt: p.finishedAt, status: huntStatus(p, now), photos: huntPhotoUrls(p),
+    })).sort((a, b) => b.joinedAt - a.joinedAt),
+  };
+}
+function huntPlayer(req) {
+  const token = cookies(req).woc_hunt;
+  if (!token) return null;
+  const hash = sha(token).toString('hex');
+  return db.hunt.players.find((p) => p.tokenHash === hash) || null;
+}
+function playerView(p) {
+  return {
+    id: p.id, name: p.name, color: p.color, photoCount: p.photoCount, duration: p.duration,
+    startedAt: p.startedAt, deadline: p.deadline, status: huntStatus(p), photos: huntPhotoUrls(p),
+  };
+}
+const huntChanged = () => { save(); broadcast('hunt', {}, ['wall', 'admin']); };
+async function removeHuntPlayer(p) {
+  db.hunt.players = db.hunt.players.filter((x) => x !== p);
+  for (const f of p.photos) if (f) await fsp.rm(path.join(UPLOADS, f), { force: true });
+  if (db.hunt.winnerId === p.id) { db.hunt.winnerId = null; db.hunt.showWinner = false; }
+}
+
+app.use('/api/hunt', express.json({ limit: '10kb' }));
+
+app.get('/api/hunt/me', (req, res) => {
+  const p = huntPlayer(req);
+  res.json({
+    active: db.hunt.active, now: Date.now(), title: db.settings.title,
+    photoCount: db.settings.huntPhotos, minutes: db.settings.huntMinutes,
+    player: p ? playerView(p) : null,
+  });
+});
+
+app.post('/api/hunt/join', (req, res) => {
+  if (!sameOrigin(req)) return res.status(403).json({ error: 'Ungültige Herkunft' });
+  if (huntPlayer(req)) return res.status(409).json({ error: 'Du machst schon mit – jeder kann nur einmal teilnehmen.' });
+  if (!db.hunt.active) return res.status(403).json({ error: 'Der Color Hunt ist gerade nicht geöffnet.' });
+  if (!rateLimit('hunt:' + req.socket.remoteAddress, 20, 10 * 60_000)) return res.status(429).json({ error: 'Zu viele Versuche, bitte kurz warten' });
+  const name = clean(req.body?.name, 30).replace(/\s+/g, ' ');
+  if (name.length < 2) return res.status(400).json({ error: 'Bitte gib deinen Namen ein (mindestens 2 Zeichen).' });
+  if (db.hunt.players.some((p) => p.name.toLocaleLowerCase('de') === name.toLocaleLowerCase('de'))) {
+    return res.status(409).json({ error: 'Dieser Name ist schon vergeben – jeder kann nur einmal mitmachen.' });
+  }
+  if (db.hunt.players.length >= 500) return res.status(503).json({ error: 'Maximale Teilnehmerzahl erreicht' });
+  // am wenigsten vergebene Farbe, bei Gleichstand zufällig
+  const used = new Map(HUNT_COLORS.map((c) => [c.name, 0]));
+  for (const p of db.hunt.players) used.set(p.color.name, (used.get(p.color.name) || 0) + 1);
+  const min = Math.min(...used.values());
+  const pool = HUNT_COLORS.filter((c) => used.get(c.name) === min);
+  const color = pool[crypto.randomInt(pool.length)];
+  const token = crypto.randomBytes(24).toString('base64url');
+  const p = {
+    id: newId(), tokenHash: sha(token).toString('hex'), name, color, joinedAt: Date.now(),
+    photoCount: db.settings.huntPhotos, duration: db.settings.huntMinutes * 60_000,
+    startedAt: null, deadline: null, finishedAt: null, photos: Array(db.settings.huntPhotos).fill(null),
+  };
+  db.hunt.players.push(p);
+  huntChanged();
+  res.set('Set-Cookie', `woc_hunt=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${2 * 86400}${req.secure ? '; Secure' : ''}`);
+  res.status(201).json({ player: playerView(p), now: Date.now() });
+});
+
+app.post('/api/hunt/start', (req, res) => {
+  const p = huntPlayer(req);
+  if (!p) return res.status(401).json({ error: 'Bitte zuerst anmelden' });
+  if (!p.startedAt) {
+    p.startedAt = Date.now();
+    p.deadline = p.startedAt + p.duration;
+    huntChanged();
+  }
+  res.json({ player: playerView(p), now: Date.now() });
+});
+
+app.put('/api/hunt/photos/:slot', express.raw({ type: 'image/jpeg', limit: MAX_PHOTO }), async (req, res) => {
+  const p = huntPlayer(req);
+  if (!p) return res.status(401).json({ error: 'Bitte zuerst anmelden' });
+  const slot = Number(req.params.slot);
+  if (!Number.isInteger(slot) || slot < 0 || slot >= p.photoCount) return res.status(400).json({ error: 'Ungültiges Foto-Feld' });
+  if (!p.startedAt) return res.status(409).json({ error: 'Die Zeit wurde noch nicht gestartet' });
+  if (p.finishedAt || Date.now() > p.deadline + HUNT_GRACE_MS) return res.status(409).json({ error: 'Die Zeit ist abgelaufen' });
+  if (!rateLimit('huntphoto:' + p.id, 40, 60_000)) return res.status(429).json({ error: 'Zu viele Uploads' });
+  const buf = req.body;
+  if (!Buffer.isBuffer(buf) || buf.length < 100 || buf[0] !== 0xff || buf[1] !== 0xd8 || buf[2] !== 0xff) {
+    return res.status(400).json({ error: 'Es wird ein JPEG-Bild erwartet' });
+  }
+  const file = `hunt-${p.id}-${slot}-${crypto.randomBytes(4).toString('hex')}.jpg`;
+  await fsp.writeFile(path.join(UPLOADS, file), buf, { flag: 'wx' });
+  if (!huntPlayer(req)) { // Spieler wurde inzwischen gelöscht
+    await fsp.rm(path.join(UPLOADS, file), { force: true });
+    return res.status(410).json({ error: 'Teilnahme wurde beendet' });
+  }
+  const old = p.photos[slot];
+  p.photos[slot] = file;
+  if (old) await fsp.rm(path.join(UPLOADS, old), { force: true });
+  huntChanged();
+  res.json({ player: playerView(p), now: Date.now() });
+});
+
+app.post('/api/hunt/finish', (req, res) => {
+  const p = huntPlayer(req);
+  if (!p) return res.status(401).json({ error: 'Bitte zuerst anmelden' });
+  if (!p.startedAt) return res.status(409).json({ error: 'Die Zeit wurde noch nicht gestartet' });
+  if (!p.finishedAt) {
+    p.finishedAt = Math.min(Date.now(), p.deadline);
+    huntChanged();
+  }
+  res.json({ player: playerView(p), now: Date.now() });
+});
+
+app.get('/api/hunt/qr.svg', async (req, res) => {
+  const svg = await QRCode.toString(`${publicBase(req)}/hunt`, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
+  res.type('image/svg+xml').send(svg);
+});
+
+app.put('/api/admin/hunt', requireAdmin, (req, res) => {
+  const { active, winnerId, showWinner } = req.body || {};
+  if (typeof active === 'boolean') db.hunt.active = active;
+  if (winnerId === null) { db.hunt.winnerId = null; db.hunt.showWinner = false; }
+  if (typeof winnerId === 'string') {
+    if (!db.hunt.players.some((p) => p.id === winnerId)) return res.status(404).json({ error: 'Teilnehmer nicht gefunden' });
+    db.hunt.winnerId = winnerId;
+    db.hunt.showWinner = true;
+  }
+  if (typeof showWinner === 'boolean') db.hunt.showWinner = showWinner && !!db.hunt.winnerId;
+  huntChanged();
+  res.json({ hunt: adminHunt() });
+});
+
+app.delete('/api/admin/hunt/players/:id', requireAdmin, async (req, res) => {
+  const p = db.hunt.players.find((x) => x.id === req.params.id);
+  if (!p) return res.status(404).json({ error: 'Nicht gefunden' });
+  await removeHuntPlayer(p);
+  huntChanged();
+  res.json({ ok: true });
+});
+
+// Neue Runde: alle Teilnehmer und ihre Fotos löschen
+app.post('/api/admin/hunt/reset', requireAdmin, async (_req, res) => {
+  for (const p of [...db.hunt.players]) await removeHuntPlayer(p);
+  db.hunt = { ...emptyHunt(), active: db.hunt.active };
+  huntChanged();
+  res.json({ ok: true });
+});
+
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Nicht gefunden' }));
 app.use((_req, res) => res.status(404).type('text').send('Nicht gefunden'));
 // eslint-disable-next-line no-unused-vars
@@ -700,8 +898,9 @@ async function main() {
   Wall (Bildschirm):   http://localhost:${PORT}/        (im Netzwerk: http://${ip}:${PORT}/)
   Fotostation (Handy): ${stationUrl}
   Admin-Panel:         http://localhost:${PORT}/admin   (im Netzwerk: http://${ip}:${PORT}/admin)
+  Color Hunt (Gäste):  ${db.settings.publicUrl || `http://${ip}:${PORT}`}/hunt
 
-  Admin-Passwort:      ${process.env.ADMIN_PASSWORD ? '(aus ADMIN_PASSWORD)' : adminPassword + (passwordGenerated ? '   (neu erzeugt, gespeichert in data/admin-password.txt)' : '   (aus data/admin-password.txt)')}
+  Admin-Passwort:      ${process.env.ADMIN_PASSWORD ? '(aus ADMIN_PASSWORD)' : adminPassword + (passwordGenerated ? `   (neu erzeugt, gespeichert in ${path.relative(ROOT, pwFile)})` : `   (aus ${path.relative(ROOT, pwFile)})`)}
 ${httpsOk ? '\n  Hinweis: Die Kamera im Handy-Browser funktioniert nur über HTTPS. Beim ersten Öffnen der\n  Fotostation die Zertifikatswarnung einmalig bestätigen ("Erweitert" -> "Trotzdem fortfahren").\n' : ''}`);
 }
 

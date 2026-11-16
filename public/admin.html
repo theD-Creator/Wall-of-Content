@@ -23,6 +23,7 @@
         <button data-tab="overview" class="active">Übersicht</button>
         <button data-tab="media">Inhalte</button>
         <button data-tab="photos">Fotos <span id="pendingBadge" class="badge" hidden></span></button>
+        <button data-tab="hunt">Color Hunt <span id="huntBadge" class="badge" hidden></span></button>
         <button data-tab="frames">Rahmen</button>
         <button data-tab="backgrounds">Hintergründe</button>
         <button data-tab="settings">Einstellungen</button>
@@ -74,6 +75,26 @@
         <div id="photoGrid" class="item-grid"></div>
       </section>
 
+      <section data-panel="hunt" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>Color Hunt</h2>
+            <label class="switch"><input id="huntActive" type="checkbox"><span></span> Geöffnet – QR-Code wird auf der Wall angezeigt</label>
+            <p class="muted small">Wer mitmacht, gibt seinen Namen ein, bekommt eine Farbe und hat dann die eingestellte Zeit für die Fotos.
+              Schließen stoppt nur neue Anmeldungen – wer schon spielt, kann fertig machen. Dauer und Fotoanzahl stellst du unter „Einstellungen“ ein.</p>
+            <div class="row wrap">
+              <button id="huntReset" class="btn danger">Neue Runde (alle Teilnehmer löschen)</button>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Sieger</h2>
+            <div id="huntWinner" class="hunt-winner-bar"></div>
+            <div id="huntUrl" class="urls"></div>
+          </div>
+        </div>
+        <div id="players" class="players"></div>
+      </section>
+
       <section data-panel="frames" class="panel">
         <div class="card">
           <p>Rahmen für die Fotostation, am besten im Hochformat 1080 × 1920 px. <b>Deckende Bilder</b> (JPG/PNG) sind Hintergründe – das Foto wird in das Fotofenster in der Mitte gesetzt. <b>Bilder mit Transparenz</b> (PNG/WebP/SVG) werden über das Foto gelegt. Hochladen oder direkt in den Ordner <code>assets/frames</code> legen.</p>
@@ -100,8 +121,6 @@
             <label>Kachelgröße (px)<input name="thumbSize" type="number" min="80" max="480"></label>
             <label>Geschwindigkeit<input name="speed" type="range" min="0" max="5" step="0.1"><output></output></label>
             <label>Anzeigedauer Bilder (s)<input name="imageDuration" type="number" min="2" max="120"></label>
-            <label class="switch"><input name="autoplay" type="checkbox"><span></span> Automatisch zufällige Inhalte zeigen</label>
-            <label>… nach Sekunden ohne Bedienung<input name="autoplayIdle" type="number" min="5" max="3600"></label>
             <label class="switch"><input name="videoSound" type="checkbox"><span></span> Videos mit Ton abspielen</label>
           </fieldset>
           <fieldset><legend>Fotostation</legend>
@@ -121,7 +140,19 @@
             <label>Höhe (%)<input name="photoH" type="number" min="10" max="100" step="0.05"></label>
             <label>Eckenradius (% der Breite)<input name="photoRadius" type="number" min="0" max="50" step="0.1"></label>
           </fieldset>
+          <fieldset><legend>Color Hunt</legend>
+            <label>Zeit pro Person (Minuten)<input name="huntMinutes" type="number" min="1" max="30"></label>
+            <label>Anzahl Fotos<input name="huntPhotos" type="number" min="1" max="10"></label>
+          </fieldset>
           <div class="row"><button class="btn primary">Speichern</button><span id="settingsSaved" class="muted"></span></div>
+        </form>
+        <form id="passwordForm" class="card" style="max-width:28rem">
+          <h2>Admin-Passwort ändern</h2>
+          <input id="pwCurrent" type="password" placeholder="Aktuelles Passwort" autocomplete="current-password" required>
+          <input id="pwNext" type="password" placeholder="Neues Passwort (mind. 6 Zeichen)" autocomplete="new-password" minlength="6" required>
+          <input id="pwRepeat" type="password" placeholder="Neues Passwort wiederholen" autocomplete="new-password" minlength="6" required>
+          <button class="btn primary">Passwort ändern</button>
+          <p class="muted small">Andere angemeldete Geräte werden dabei abgemeldet.</p>
         </form>
       </section>
     </main>
