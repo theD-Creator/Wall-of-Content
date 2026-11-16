@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Wall of Content</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="wall">
+  <div id="bg" class="wall-bg"></div>
+  <header class="wall-head">
+    <h1 id="title"></h1>
+    <p id="subtitle"></p>
+  </header>
+  <div id="stage" class="stage"></div>
+  <p id="empty" class="wall-empty" hidden>Noch keine Inhalte – lade im Admin-Panel Bilder und Videos hoch<br>oder mach ein Foto an der Fotostation.</p>
+
+  <div id="viewer" class="viewer" hidden>
+    <div class="viewer-frame">
+      <div id="viewerMedia" class="viewer-media"></div>
+      <div id="viewerTitle" class="viewer-title"></div>
+      <div class="viewer-progress"><i id="viewerBar"></i></div>
+    </div>
+    <button id="viewerClose" class="viewer-close" aria-label="Schließen">✕</button>
+  </div>
+  <script src="/js/common.js"></script>
+  <script src="/js/wall.js"></script>
+</body>
+</html>

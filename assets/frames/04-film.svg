@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">
+  <defs>
+    <mask id="m"><rect width="1080" height="1440" fill="#fff"/><rect x="110" y="40" width="860" height="1360" rx="16" fill="#000"/>
+      <g fill="#000"><rect x="28" y="30" width="54" height="64" rx="10"/><rect x="28" y="150" width="54" height="64" rx="10"/><rect x="28" y="270" width="54" height="64" rx="10"/><rect x="28" y="390" width="54" height="64" rx="10"/><rect x="28" y="510" width="54" height="64" rx="10"/><rect x="28" y="630" width="54" height="64" rx="10"/><rect x="28" y="750" width="54" height="64" rx="10"/><rect x="28" y="870" width="54" height="64" rx="10"/><rect x="28" y="990" width="54" height="64" rx="10"/><rect x="28" y="1110" width="54" height="64" rx="10"/><rect x="28" y="1230" width="54" height="64" rx="10"/><rect x="28" y="1350" width="54" height="64" rx="10"/>
+      <rect x="998" y="30" width="54" height="64" rx="10"/><rect x="998" y="150" width="54" height="64" rx="10"/><rect x="998" y="270" width="54" height="64" rx="10"/><rect x="998" y="390" width="54" height="64" rx="10"/><rect x="998" y="510" width="54" height="64" rx="10"/><rect x="998" y="630" width="54" height="64" rx="10"/><rect x="998" y="750" width="54" height="64" rx="10"/><rect x="998" y="870" width="54" height="64" rx="10"/><rect x="998" y="990" width="54" height="64" rx="10"/><rect x="998" y="1110" width="54" height="64" rx="10"/><rect x="998" y="1230" width="54" height="64" rx="10"/><rect x="998" y="1350" width="54" height="64" rx="10"/></g>
+    </mask>
+  </defs>
+  <rect width="1080" height="1440" fill="#111118" mask="url(#m)"/>
+</svg>

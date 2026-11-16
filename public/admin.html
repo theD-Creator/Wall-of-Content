@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Admin – Wall of Content</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="admin">
+  <form id="login" class="login" hidden>
+    <h1>Admin-Panel</h1>
+    <p class="muted">Wall of Content</p>
+    <input id="password" type="password" placeholder="Passwort" autocomplete="current-password" required>
+    <button class="btn primary">Anmelden</button>
+    <p id="loginError" class="error"></p>
+  </form>
+
+  <div id="app" hidden>
+    <header class="admin-head">
+      <strong>Wall of Content</strong>
+      <nav id="tabs" class="tabs">
+        <button data-tab="overview" class="active">Übersicht</button>
+        <button data-tab="media">Inhalte</button>
+        <button data-tab="photos">Fotos <span id="pendingBadge" class="badge" hidden></span></button>
+        <button data-tab="frames">Rahmen</button>
+        <button data-tab="backgrounds">Hintergründe</button>
+        <button data-tab="settings">Einstellungen</button>
+      </nav>
+      <button id="logout" class="btn ghost small">Abmelden</button>
+    </header>
+
+    <main>
+      <section data-panel="overview" class="panel active">
+        <div class="cards" id="stats"></div>
+        <div class="grid2">
+          <div class="card">
+            <h2>Adressen</h2>
+            <div id="urls" class="urls"></div>
+          </div>
+          <div class="card">
+            <h2>Verbundene Geräte</h2>
+            <ul id="devices" class="devices"></ul>
+            <h2>Steuerung</h2>
+            <div class="row wrap">
+              <label class="switch"><input id="stationsEnabled" type="checkbox"><span></span> Fotostationen aktiv</label>
+            </div>
+            <div class="row wrap">
+              <button class="btn" data-cmd="reload" data-target="wall">Wall neu laden</button>
+              <button class="btn" data-cmd="reload" data-target="station">Stationen neu laden</button>
+              <button class="btn" data-cmd="close">Anzeige auf der Wall schließen</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="media" class="panel">
+        <div id="drop" class="drop">
+          <p><b>Bilder &amp; Videos hierher ziehen</b> oder</p>
+          <label class="btn primary">Dateien auswählen<input id="mediaInput" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple hidden></label>
+          <p class="muted small">JPG, PNG, WebP, GIF, MP4, WebM, MOV</p>
+          <div id="uploads" class="uploads"></div>
+        </div>
+        <div id="mediaGrid" class="item-grid"></div>
+      </section>
+
+      <section data-panel="photos" class="panel">
+        <div class="row wrap filter">
+          <button class="chip active" data-filter="all">Alle</button>
+          <button class="chip" data-filter="pending">Warten auf Freigabe</button>
+          <button class="chip" data-filter="wall">Auf der Wall</button>
+          <button class="chip" data-filter="private">Nicht geteilt</button>
+        </div>
+        <div id="photoGrid" class="item-grid"></div>
+      </section>
+
+      <section data-panel="frames" class="panel">
+        <div class="card">
+          <p>Rahmen sind Bilder mit transparentem Bereich (PNG, WebP oder SVG), am besten im Hochformat 3:4, z.&nbsp;B. 1080 × 1440 px. Du kannst sie hier hochladen oder direkt in den Ordner <code>assets/frames</code> legen.</p>
+          <label class="btn primary">Rahmen hochladen<input type="file" data-asset="frames" accept="image/png,image/webp,image/svg+xml" multiple hidden></label>
+        </div>
+        <div id="framesGrid" class="item-grid"></div>
+      </section>
+
+      <section data-panel="backgrounds" class="panel">
+        <div class="card">
+          <p>Hintergrundbild für die Wall und die Fotostation. Hochladen oder direkt in den Ordner <code>assets/backgrounds</code> legen.</p>
+          <label class="btn primary">Hintergrund hochladen<input type="file" data-asset="backgrounds" accept="image/png,image/webp,image/svg+xml,image/jpeg" multiple hidden></label>
+        </div>
+        <div id="backgroundsGrid" class="item-grid wide"></div>
+      </section>
+
+      <section data-panel="settings" class="panel">
+        <form id="settingsForm" class="settings">
+          <fieldset><legend>Wall</legend>
+            <label>Titel<input name="title" maxlength="80"></label>
+            <label>Untertitel<input name="subtitle" maxlength="160"></label>
+            <label>Akzentfarbe<input name="accent" type="color"></label>
+            <label>Max. Kacheln gleichzeitig<input name="wallMaxItems" type="number" min="1" max="120"></label>
+            <label>Kachelgröße (px)<input name="thumbSize" type="number" min="80" max="480"></label>
+            <label>Geschwindigkeit<input name="speed" type="range" min="0" max="5" step="0.1"><output></output></label>
+            <label>Anzeigedauer Bilder (s)<input name="imageDuration" type="number" min="2" max="120"></label>
+            <label class="switch"><input name="autoplay" type="checkbox"><span></span> Automatisch zufällige Inhalte zeigen</label>
+            <label>… nach Sekunden ohne Bedienung<input name="autoplayIdle" type="number" min="5" max="3600"></label>
+            <label class="switch"><input name="videoSound" type="checkbox"><span></span> Videos mit Ton abspielen</label>
+          </fieldset>
+          <fieldset><legend>Fotostation</legend>
+            <label>Titel<input name="stationTitle" maxlength="80"></label>
+            <label>Countdown (s)<input name="countdown" type="number" min="0" max="10"></label>
+            <label>QR-Code anzeigen für (s)<input name="qrTimeout" type="number" min="10" max="600"></label>
+            <label class="switch"><input name="shareDefault" type="checkbox"><span></span> Haken „Auf der Wall anzeigen“ vorausgewählt</label>
+            <label class="switch"><input name="moderation" type="checkbox"><span></span> Fotos erst nach Freigabe im Admin-Panel auf der Wall zeigen</label>
+            <label>Fotos automatisch löschen nach Stunden (0 = nie)<input name="retentionHours" type="number" min="0" max="8760"></label>
+            <label>Öffentliche Adresse für QR-Codes (leer = automatisch)<input name="publicUrl" type="url" placeholder="http://192.168.1.10:3000"></label>
+          </fieldset>
+          <div class="row"><button class="btn primary">Speichern</button><span id="settingsSaved" class="muted"></span></div>
+        </form>
+      </section>
+    </main>
+  </div>
+  <div id="toast" class="toast" hidden></div>
+  <script src="/js/common.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

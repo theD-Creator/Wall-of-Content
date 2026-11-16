@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">
+  <path fill="#fdfcf7" fill-rule="evenodd" d="M0 0h1080v1440H0z M60 60v1080h960V60z"/>
+  <rect x="60" y="60" width="960" height="1080" fill="none" stroke="#00000022" stroke-width="4"/>
+  <text x="540" y="1320" text-anchor="middle" font-family="'Comic Sans MS','Segoe Print','Bradley Hand',cursive" font-size="92" fill="#2b2b3a">Schön war's!</text>
+</svg>
