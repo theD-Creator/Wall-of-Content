@@ -274,11 +274,26 @@ setInterval(() => {
 /* ------------------------------------------------------------------ */
 /* Hilfsfunktionen                                                     */
 /* ------------------------------------------------------------------ */
+/**
+ * Adresse dieses Rechners im WLAN/LAN. Bevorzugt private Adressen echter Netzwerkkarten
+ * (macOS: en0/en1, Windows: WLAN/Ethernet, Linux: wlan/eth) statt VPN, AirDrop, Docker usw.
+ * Mit LAN_IP=192.168.1.10 lässt sie sich fest vorgeben.
+ */
 function lanIp() {
-  for (const list of Object.values(os.networkInterfaces())) {
-    for (const i of list || []) if (i.family === 'IPv4' && !i.internal) return i.address;
+  if (process.env.LAN_IP) return process.env.LAN_IP;
+  const candidates = [];
+  for (const [name, list] of Object.entries(os.networkInterfaces())) {
+    for (const i of list || []) {
+      if ((i.family !== 'IPv4' && i.family !== 4) || i.internal || i.address.startsWith('169.254.')) continue;
+      let score = 0;
+      if (/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(i.address)) score += 2;
+      if (/^(en\d|eth|wlan|wlp|enp|eno|wi-?fi|wlan|ethernet)/i.test(name)) score += 1;
+      if (/^(docker|br-|veth|vbox|vmnet|virbr|utun|tun|tap|bridge|awdl|llw|zt|tailscale|wg|anpi|ap\d)/i.test(name)) score -= 3;
+      candidates.push({ address: i.address, score });
+    }
   }
-  return 'localhost';
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates.length ? candidates[0].address : 'localhost';
 }
 function requestHostname(req) {
   const m = /^([a-z0-9.-]+|\[[0-9a-f:]+\])(:\d+)?$/i.exec(req.headers.host || '');
@@ -1317,7 +1332,17 @@ async function main() {
     });
   } catch { /* Ordnerüberwachung nicht verfügbar – Abgleich erfolgt beim Öffnen des Admin-Panels */ }
   const ip = lanIp();
-  await new Promise((resolve) => http.createServer(app).listen(PORT, resolve));
+  await new Promise((resolve) => http.createServer(app)
+    .on('error', (e) => {
+      if (e.code === 'EADDRINUSE') {
+        console.error(`\n  Port ${PORT} ist schon belegt. Läuft die Wall of Content schon in einem anderen Fenster?\n` +
+          `  Sonst mit einem anderen Port starten, z. B.:  PORT=3001 npm start\n`);
+      } else {
+        console.error('\n  Der Server konnte nicht starten:', e.message, '\n');
+      }
+      process.exit(1);
+    })
+    .listen(PORT, resolve));
   let httpsOk = false;
   if (HTTPS_PORT) {
     try {
@@ -1325,7 +1350,7 @@ async function main() {
       await new Promise((resolve, reject) => https.createServer(tls, app).on('error', reject).listen(HTTPS_PORT, resolve));
       httpsOk = true;
     } catch (e) {
-      console.error('HTTPS konnte nicht gestartet werden:', e.message);
+      console.error('HTTPS konnte nicht gestartet werden:', e.code === 'EADDRINUSE' ? `Port ${HTTPS_PORT} ist schon belegt (anderen Port mit HTTPS_PORT=3444 wählen).` : e.message);
     }
   }
   const stationUrl = httpsOk ? `https://${ip}:${HTTPS_PORT}/station` : `http://${ip}:${PORT}/station`;

@@ -41,7 +41,10 @@ Admin-Panel unter **Übersicht** gibt es zu jeder Adresse einen QR-Code.
 
 ## 2. Installieren und starten
 
-Einmalig wird [Node.js](https://nodejs.org) (Version 18 oder neuer) gebraucht.
+> **Mac?** Am einfachsten geht es mit dem Startskript zum Doppelklicken – ohne etwas zu installieren.
+> Alles dazu steht in der [Mac-Anleitung](MAC.md).
+
+Für den Start über das Terminal (Windows, Linux oder Mac) wird einmalig [Node.js](https://nodejs.org) (Version 18 oder neuer) gebraucht.
 
 **Code holen** – entweder als ZIP herunterladen und entpacken
 ([Download](https://github.com/theD-Creator/Wall-of-Content/archive/refs/heads/claude/wall-of-content-photo-stations-blixdl.zip))
