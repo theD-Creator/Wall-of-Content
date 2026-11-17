@@ -116,7 +116,7 @@ function validateSetting(key, value) {
   return undefined;
 }
 
-const emptyHunt = () => ({ active: false, round: newId(), players: [], winnerId: null, showWinner: false });
+const emptyHunt = () => ({ active: false, endsAt: null, round: newId(), players: [], winnerId: null, showWinner: false });
 const DEFAULT_QUESTIONS = [
   ['Welche Farbe entsteht, wenn du Blau und Gelb mischst?', ['Grün', 'Lila', 'Orange', 'Braun'], 0],
   ['Welche Farbe entsteht, wenn du Rot und Gelb mischst?', ['Grün', 'Orange', 'Pink', 'Blau'], 1],
@@ -430,7 +430,7 @@ app.get('/api/state', async (_req, res) => {
   res.json({
     settings,
     logoUrl: logoUrl(),
-    hunt: { active: db.hunt.active, winner: db.hunt.showWinner ? winnerInfo() : null },
+    hunt: { active: db.hunt.active, endsAt: db.hunt.endsAt, now: Date.now(), winner: db.hunt.showWinner ? winnerInfo() : null },
     quiz: { active: db.quiz.active, board: db.quiz.showBoard ? quizBoard(10) : null },
     backgroundUrl: bg ? bg.url : null,
     frames: frames.filter((f) => f.enabled).map(({ file, url, name }) => ({ file, url, name })),
@@ -825,7 +825,7 @@ function winnerInfo() {
 function adminHunt() {
   const now = Date.now();
   return {
-    active: db.hunt.active, winnerId: db.hunt.winnerId, showWinner: db.hunt.showWinner, now,
+    active: db.hunt.active, endsAt: db.hunt.endsAt, winnerId: db.hunt.winnerId, showWinner: db.hunt.showWinner, now,
     players: db.hunt.players.map((p) => ({
       id: p.id, name: p.name, color: p.color, joinedAt: p.joinedAt, startedAt: p.startedAt, deadline: p.deadline,
       finishedAt: p.finishedAt, status: huntStatus(p, now), photos: huntPhotoUrls(p),
@@ -857,6 +857,8 @@ app.get('/api/hunt/me', (req, res) => {
   const p = huntPlayer(req);
   res.json({
     active: db.hunt.active, now: Date.now(), title: db.settings.title,
+    endsAt: db.hunt.active ? db.hunt.endsAt : null,
+    ended: !db.hunt.active && !!db.hunt.endsAt && db.hunt.endsAt <= Date.now(),
     photoCount: db.settings.huntPhotos, minutes: db.settings.huntMinutes,
     player: p ? playerView(p) : null,
   });
@@ -895,8 +897,9 @@ app.post('/api/hunt/start', (req, res) => {
   const p = huntPlayer(req);
   if (!p) return res.status(401).json({ error: 'Bitte zuerst anmelden' });
   if (!p.startedAt) {
+    if (db.hunt.endsAt && db.hunt.endsAt <= Date.now()) return res.status(409).json({ error: 'Die Color-Hunt-Challenge ist schon vorbei.' });
     p.startedAt = Date.now();
-    p.deadline = p.startedAt + p.duration;
+    p.deadline = Math.min(p.startedAt + p.duration, db.hunt.endsAt || Infinity);
     huntChanged();
   }
   res.json({ player: playerView(p), now: Date.now() });
@@ -944,8 +947,25 @@ app.get('/api/hunt/qr.svg', async (req, res) => {
 });
 
 app.put('/api/admin/hunt', requireAdmin, (req, res) => {
-  const { active, winnerId, showWinner } = req.body || {};
-  if (typeof active === 'boolean') db.hunt.active = active;
+  const { active, winnerId, showWinner, countdownMinutes, extendMinutes, countdown } = req.body || {};
+  const minutes = (v, min, max) => (typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? v : undefined);
+  if (countdownMinutes !== undefined) {
+    const m = minutes(countdownMinutes, 1, 600);
+    if (m === undefined) return res.status(400).json({ error: 'Bitte 1 bis 600 Minuten angeben' });
+    db.hunt.endsAt = Date.now() + m * 60_000;
+    db.hunt.active = true; // Countdown starten öffnet den Color Hunt
+  }
+  if (extendMinutes !== undefined) {
+    const m = minutes(extendMinutes, -600, 600);
+    if (m === undefined || !m) return res.status(400).json({ error: 'Ungültige Minutenzahl' });
+    if (!db.hunt.endsAt || !db.hunt.active) return res.status(409).json({ error: 'Es läuft gerade kein Countdown' });
+    db.hunt.endsAt = Math.max(Date.now() + 5_000, db.hunt.endsAt + m * 60_000);
+  }
+  if (countdown === null) db.hunt.endsAt = null; // Countdown stoppen, Color Hunt bleibt offen
+  if (typeof active === 'boolean') {
+    db.hunt.active = active;
+    if (!active || (db.hunt.endsAt && db.hunt.endsAt <= Date.now())) db.hunt.endsAt = null;
+  }
   if (winnerId === null) { db.hunt.winnerId = null; db.hunt.showWinner = false; }
   if (typeof winnerId === 'string') {
     if (!db.hunt.players.some((p) => p.id === winnerId)) return res.status(404).json({ error: 'Teilnehmer nicht gefunden' });
@@ -953,9 +973,34 @@ app.put('/api/admin/hunt', requireAdmin, (req, res) => {
     db.hunt.showWinner = true;
   }
   if (typeof showWinner === 'boolean') db.hunt.showWinner = showWinner && !!db.hunt.winnerId;
+  capDeadlines();
+  scheduleHuntEnd();
   huntChanged();
   res.json({ hunt: adminHunt() });
 });
+
+/** Laufende Teilnehmer haben höchstens bis zum Ende des Countdowns Zeit. */
+function capDeadlines() {
+  const now = Date.now();
+  for (const p of db.hunt.players) {
+    if (!p.startedAt || p.finishedAt || p.deadline < now) continue; // schon fertig
+    p.deadline = Math.max(now, Math.min(p.startedAt + p.duration, db.hunt.endsAt || Infinity));
+  }
+}
+let huntEndTimer = null;
+function scheduleHuntEnd() {
+  clearTimeout(huntEndTimer);
+  if (!db.hunt.active || !db.hunt.endsAt) return;
+  const left = db.hunt.endsAt - Date.now();
+  if (left <= 0) return endHunt();
+  huntEndTimer = setTimeout(scheduleHuntEnd, Math.min(left, 60 * 60_000)); // lange Wartezeiten in Etappen
+}
+/** Countdown abgelaufen: Color Hunt schließen, laufende Teilnehmer geben automatisch ab. */
+function endHunt() {
+  db.hunt.active = false;
+  capDeadlines();
+  huntChanged();
+}
 
 app.delete('/api/admin/hunt/players/:id', requireAdmin, async (req, res) => {
   const p = db.hunt.players.find((x) => x.id === req.params.id);
@@ -968,7 +1013,7 @@ app.delete('/api/admin/hunt/players/:id', requireAdmin, async (req, res) => {
 // Neue Runde: alle Teilnehmer und ihre Fotos löschen
 app.post('/api/admin/hunt/reset', requireAdmin, async (_req, res) => {
   for (const p of [...db.hunt.players]) await removeHuntPlayer(p);
-  db.hunt = { ...emptyHunt(), active: db.hunt.active };
+  db.hunt = { ...emptyHunt(), active: db.hunt.active, endsAt: db.hunt.endsAt };
   huntChanged();
   res.json({ ok: true });
 });
@@ -1262,6 +1307,7 @@ async function certificate() {
 
 async function main() {
   await cleanup();
+  scheduleHuntEnd(); // falls der Server während eines Countdowns neu gestartet wurde
   await syncMediaFolder();
   let watchTimer = null;
   try {

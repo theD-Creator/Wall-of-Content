@@ -256,12 +256,36 @@
   function updateCountdowns() {
     if (!data) return;
     const skew = data.hunt.now - (data.loadedAt || Date.now());
+    const h = data.hunt;
+    const clock = $('#huntClock');
+    const left = h.endsAt ? Math.ceil((h.endsAt - Date.now() - skew) / 1000) : 0;
+    if (h.endsAt && h.active && left > 0) {
+      const hh = Math.floor(left / 3600), mm = Math.floor((left % 3600) / 60), ss = String(left % 60).padStart(2, '0');
+      clock.textContent = `Noch ${hh ? `${hh}:${String(mm).padStart(2, '0')}` : mm}:${ss}`;
+    } else {
+      clock.textContent = h.endsAt ? 'Abgelaufen – Color Hunt geschlossen' : 'Kein Countdown';
+    }
+    clock.classList.toggle('running', !!(h.endsAt && h.active && left > 0));
+    clock.classList.toggle('urgent', h.endsAt && h.active && left > 0 && left <= 60);
+    for (const b of $$('[data-extend], #huntCdStop')) b.disabled = !(h.endsAt && h.active && left > 0);
     for (const s of $$('.status[data-deadline]')) {
       const left = Math.max(0, Math.ceil((Number(s.dataset.deadline) - Date.now() - skew) / 1000));
       s.textContent = left ? `Läuft · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : 'Zeit abgelaufen';
     }
   }
   setInterval(updateCountdowns, 1000);
+  $('#huntCdStart').addEventListener('click', () => {
+    const m = Number($('#huntMins').value);
+    if (!(m >= 1 && m <= 600)) return toast('Bitte 1 bis 600 Minuten eingeben', true);
+    call('/api/admin/hunt', { method: 'PUT', json: { countdownMinutes: m } })
+      .then(() => { toast(`Countdown läuft: ${m} Minuten`); load(); });
+  });
+  for (const b of $$('[data-extend]')) {
+    b.addEventListener('click', () => call('/api/admin/hunt', { method: 'PUT', json: { extendMinutes: Number(b.dataset.extend) } }).then(load));
+  }
+  $('#huntCdStop').addEventListener('click', () => {
+    if (confirm('Countdown stoppen? Der Color Hunt bleibt geöffnet.')) call('/api/admin/hunt', { method: 'PUT', json: { countdown: null } }).then(load);
+  });
   $('#huntActive').addEventListener('change', (e) => {
     call('/api/admin/hunt', { method: 'PUT', json: { active: e.target.checked } }).then(load, load);
   });

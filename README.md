@@ -49,6 +49,8 @@ Tipp: `…/station?name=Eingang` gibt der Station einen Namen, der im Admin-Pane
 5. Im Admin-Panel siehst du alle Teilnehmer mit ihren Fotos live. Mit **„Als Sieger wählen“** erscheint der Sieger
    mit Name, Farbe und Fotos groß auf der Wall – bis du ihn wieder ausblendest.
 6. **„Neue Runde“** löscht alle Teilnehmer und Fotos, danach können alle wieder mitmachen.
+7. **Countdown:** Im Tab Color Hunt Minuten eintragen und „Countdown starten“. Die Restzeit läuft auf der Wall und den
+   Handys mit (+5/−5 Min jederzeit möglich). Läuft sie ab, schließt der Color Hunt automatisch und alle geben ab.
 
 Zeit und Anzahl der Fotos stellst du unter Einstellungen → „Color Hunt“ ein.
 

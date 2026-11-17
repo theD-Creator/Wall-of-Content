@@ -220,6 +220,26 @@ Gäste suchen mit dem eigenen Handy Dinge in einer bestimmten Farbe.
 |---|---|---|---|
 | ![Name](screenshots/hunt-name.jpg) | ![Farbe](screenshots/hunt-farbe.jpg) | ![Anleitung](screenshots/hunt-anleitung.jpg) | ![Fotos](screenshots/hunt-fotos.jpg) |
 
+### Countdown für die ganze Challenge
+
+Im Tab **Color Hunt** kannst du festlegen, wie lange die Challenge insgesamt noch läuft:
+
+1. Minuten eintragen (z. B. `30`) und auf **Countdown starten** klicken – der Color Hunt öffnet sich dabei automatisch.
+2. Mit **+5 Min** / **−5 Min** verlängerst oder verkürzt du jederzeit, **Countdown stoppen** entfernt ihn (die Challenge bleibt offen).
+3. Die Restzeit läuft auf der **Wall** im QR-Kasten mit, die **letzten 10 Sekunden** erscheinen groß in der Mitte, danach „Zeit ist um!“.
+4. Auch auf den **Handys der Gäste** steht „Die Challenge endet in …“. Wer kurz vor Schluss startet, hat nur noch die Restzeit
+   statt der vollen 5 Minuten.
+5. Ist der Countdown abgelaufen, **schließt der Color Hunt automatisch**: keine neuen Anmeldungen mehr, und alle, die gerade
+   noch fotografieren, geben automatisch ab. Danach kannst du in Ruhe den Sieger wählen.
+
+![Countdown im Admin-Panel](screenshots/admin-countdown.jpg)
+
+| Wall mit Countdown | Die letzten Sekunden | Handy des Gastes |
+|---|---|---|
+| ![Wall mit Countdown](screenshots/wall-countdown.jpg) | ![Letzte Sekunden](screenshots/wall-countdown-final.jpg) | ![Gast](screenshots/hunt-countdown.jpg) |
+
+### Teilnehmer und Sieger
+
 Im Admin-Panel siehst du alle Teilnehmer live – mit Farbe, Restzeit und Fotos. Mit **„Als Sieger wählen“** erscheint der
 Sieger sofort groß auf der Wall, bis du ihn mit **„Auf der Wall ausblenden“** wieder wegnimmst.
 **„Neue Runde“** löscht alle Teilnehmer und Fotos.
@@ -326,7 +346,7 @@ die Wall oder Stationen neu laden und einen geöffneten Inhalt auf der Wall schl
 5. Quiz-iPad: Adresse öffnen (zeigt erst die Wall), Geführten Zugriff aktivieren.
 6. Optional Verbund-iPads mit ihren Positionen öffnen.
 7. Unter **Übersicht → Verbundene Geräte** prüfen, dass alles verbunden ist.
-8. Wenn es losgeht: Quiz starten, Color Hunt öffnen.
+8. Wenn es losgeht: Quiz starten, Color-Hunt-Countdown starten.
 
 ---
 

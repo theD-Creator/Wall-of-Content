@@ -15,7 +15,9 @@
     clearTimeout(toast.timer);
     toast.timer = setTimeout(() => { t.hidden = true; }, 4000);
   }
+  let screenName = 'loading';
   function show(name) {
+    screenName = name;
     for (const s of $$('.screen')) s.classList.toggle('active', s.dataset.screen === name);
     scrollTo(0, 0);
   }
@@ -23,9 +25,13 @@
   const setTime = (now) => { offset = now - Date.now(); };
 
   function bind() {
+    const duration = player ? player.duration : me.minutes * 60000;
+    const remaining = me.endsAt ? me.endsAt - serverNow() : Infinity;
     const map = {
       name: player ? player.name : '', color: player ? player.color.name : '',
-      count: player ? player.photoCount : me.photoCount, minutes: player ? Math.round(player.duration / 60000) : me.minutes,
+      count: player ? player.photoCount : me.photoCount,
+      // endet die Challenge vorher, gilt die kürzere Zeit
+      minutes: remaining < duration ? clock(Math.max(0, Math.ceil(remaining / 1000))) : Math.round(duration / 60000),
     };
     for (const n of $$('[data-bind]')) n.textContent = map[n.dataset.bind];
     if (player) {
@@ -37,9 +43,42 @@
     }
   }
 
+  const clock = (s) => {
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = String(s % 60).padStart(2, '0');
+    return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
+  };
+  /** Countdown der gesamten Challenge (vom Admin festgelegt) */
+  function updateEnds() {
+    if (!me) return;
+    const left = me.endsAt ? me.endsAt - serverNow() : 0;
+    for (const n of $$('[data-ends]')) {
+      n.hidden = left <= 0;
+      n.textContent = `⏳ Die Challenge endet in ${clock(Math.ceil(left / 1000))}`;
+      n.classList.toggle('urgent', left > 0 && left <= 60_000);
+    }
+  }
+  setInterval(updateEnds, 1000);
+
+  // Regelmäßig nachfragen: hat der Admin den Countdown verlängert, verkürzt oder die Challenge geschlossen?
+  setInterval(async () => {
+    if (!me || screenName === 'done' || screenName === 'loading') return;
+    try {
+      const fresh = await api('/api/hunt/me');
+      setTime(fresh.now);
+      Object.assign(me, { active: fresh.active, endsAt: fresh.endsAt, ended: fresh.ended });
+      if (player && fresh.player) player.deadline = fresh.player.deadline;
+      if (!player && ['name', 'closed'].includes(screenName)) route();
+      updateEnds();
+    } catch { /* nächster Versuch */ }
+  }, 8000);
+
   /* ---------------- Ablauf ---------------- */
   function route() {
     bind();
+    updateEnds();
+    $('#closedText').textContent = me.ended
+      ? 'Die Color-Hunt-Challenge ist vorbei. Danke fürs Mitmachen – schau auf die Wall, dort wird der Sieger gezeigt!'
+      : 'Der Color Hunt ist gerade nicht geöffnet. Schau später nochmal vorbei!';
     if (!player) return show(me.active ? 'name' : 'closed');
     if (player.status === 'done') return showDone();
     if (player.status === 'running') return startHunt();
@@ -137,7 +176,7 @@
     const tick = () => {
       const left = Math.max(0, player.deadline - serverNow());
       const s = Math.ceil(left / 1000);
-      $('#timer').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      $('#timer').textContent = clock(s);
       $('#timer').classList.toggle('low', s <= 30);
       if (left <= 0) {
         clearInterval(timer);

@@ -90,6 +90,18 @@
           <div class="card">
             <h2>Color Hunt</h2>
             <label class="switch"><input id="huntActive" type="checkbox"><span></span> Geöffnet – QR-Code wird auf der Wall angezeigt</label>
+            <div class="countdown">
+              <div class="countdown-head"><b>⏳ Countdown für die Challenge</b><span id="huntClock" class="hunt-clock">Kein Countdown</span></div>
+              <div class="row wrap">
+                <label class="mins"><input id="huntMins" type="number" min="1" max="600" value="30"> Minuten</label>
+                <button id="huntCdStart" class="btn primary small">Countdown starten</button>
+                <button class="btn small" data-extend="5">+5 Min</button>
+                <button class="btn small" data-extend="-5">−5 Min</button>
+                <button id="huntCdStop" class="btn small ghost">Countdown stoppen</button>
+              </div>
+              <p class="muted small">„Countdown starten“ öffnet den Color Hunt sofort. Die Restzeit läuft auf der Wall und auf den Handys der Gäste mit.
+                Ist sie abgelaufen, schließt der Color Hunt automatisch und alle laufenden Teilnehmer geben ab.</p>
+            </div>
             <p class="muted small">Wer mitmacht, gibt seinen Namen ein, bekommt eine Farbe und hat dann die eingestellte Zeit für die Fotos.
               Schließen stoppt nur neue Anmeldungen – wer schon spielt, kann fertig machen. Dauer und Fotoanzahl stellst du unter „Einstellungen“ ein.</p>
             <div class="row wrap">

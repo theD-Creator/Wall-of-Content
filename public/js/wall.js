@@ -365,7 +365,39 @@
 
   /* ---------------- Color Hunt: QR-Code & Sieger ---------------- */
   let winnerKey = '';
+  let huntClock = { active: false, endsAt: null, offset: 0 };
+  const clockText = (s) => {
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = String(s % 60).padStart(2, '0');
+    return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
+  };
+  /** Countdown der Challenge: im QR-Kasten, die letzten 10 Sekunden groß in der Mitte. */
+  function updateHuntClock() {
+    const cd = $('#huntCountdown');
+    const fin = $('#huntFinal');
+    const { active, endsAt, offset } = huntClock;
+    if (!endsAt) { cd.hidden = true; fin.hidden = true; return; }
+    const left = endsAt - (Date.now() + offset);
+    const s = Math.max(0, Math.ceil(left / 1000));
+    cd.hidden = !active || left <= 0;
+    cd.textContent = `⏳ Noch ${clockText(s)}`;
+    cd.classList.toggle('urgent', s <= 60);
+    let text = '';
+    if (left > 0 && s <= 10 && active) text = String(s);
+    else if (left <= 0 && left > -6000) text = 'Zeit ist um!';
+    fin.hidden = !text;
+    if (text && fin.textContent !== text) {
+      fin.textContent = text;
+      fin.classList.toggle('over', left <= 0);
+      fin.classList.remove('pop');
+      void fin.offsetWidth;
+      fin.classList.add('pop');
+    }
+  }
+  setInterval(updateHuntClock, 200);
+
   function renderHunt(hunt) {
+    huntClock = { active: !!hunt.active, endsAt: hunt.endsAt || null, offset: (hunt.now || Date.now()) - Date.now() };
+    updateHuntClock();
     const qr = $('#huntQr');
     if (hunt.active && qr.hidden) $('img', qr).src = '/api/hunt/qr.svg?t=' + Date.now();
     qr.hidden = !hunt.active;
