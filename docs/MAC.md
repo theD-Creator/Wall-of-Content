@@ -27,14 +27,16 @@ Läuft alles, geht es mit der normalen [Anleitung](ANLEITUNG.md) weiter (Admin-P
 ### 1. Herunterladen und entpacken
 
 1. Diesen Link öffnen – der Download startet sofort:
-   <https://github.com/theD-Creator/Wall-of-Content/archive/refs/heads/claude/wall-of-content-photo-stations-blixdl.zip>
+    <https://github.com/theD-Creator/Wall-of-Content/archive/refs/heads/claude/wall-of-content-photo-stations-blixdl.zip>
 
-   Erscheint stattdessen „404 – Page not found“, ist das Repository privat: zuerst bei
-   [github.com](https://github.com) mit einem Konto anmelden, das Zugriff auf das Repository hat, und den Link dann
-   erneut öffnen. Alternativ kann jemand mit Zugriff die ZIP-Datei herunterladen und weitergeben (z. B. per AirDrop
-   oder USB-Stick).
+    Erscheint stattdessen „404 – Page not found“, ist das Repository privat: zuerst bei
+    [github.com](https://github.com) mit einem Konto anmelden, das Zugriff auf das Repository hat, und den Link dann
+    erneut öffnen. Alternativ kann jemand mit Zugriff die ZIP-Datei herunterladen und weitergeben (z. B. per AirDrop
+    oder USB-Stick).
+
 2. Die ZIP-Datei im Ordner **Downloads** doppelklicken. Es entsteht ein Ordner wie
    `Wall-of-Content-claude-wall-of-content-photo-stations-blixdl`.
+
 3. Den Ordner an einen festen Ort ziehen, z. B. in **Dokumente**, und am besten in **Wall of Content** umbenennen.
    (Bitte nicht im Papierkorb oder auf einem USB-Stick lassen.)
 

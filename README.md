@@ -3,7 +3,7 @@
 📖 **Dokumentation**
 
 - [Anleitung mit Screenshots](docs/ANLEITUNG.md) – Bedienung von Wall, Fotostation, Color Hunt, Quiz und Admin-Panel
-- [Start auf dem Mac](docs/MAC.md) – per Doppelklick, ohne Installation
+- [Start auf dem Mac](docs/MAC.md) – per Doppelklick, ohne Installation ([als PDF zum Ausdrucken](docs/Wall-of-Content-Mac-Anleitung.pdf))
 - [Technische Dokumentation](docs/TECHNIK.md) – Aufbau, Daten, API, Sicherheit
 
 **Mac:** Ordner entpacken, `Start-Mac.command` mit Rechtsklick → Öffnen starten – fertig ([Details](docs/MAC.md)).
