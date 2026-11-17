@@ -17,7 +17,8 @@ Läuft alles, geht es mit der normalen [Anleitung](ANLEITUNG.md) weiter (Admin-P
 ## Kurzfassung
 
 1. Code als ZIP herunterladen und entpacken.
-2. Im entpackten Ordner **`Start-Mac.command`** mit **Rechtsklick → Öffnen** starten.
+2. Im entpackten Ordner **`Start-Mac.command`** doppelklicken. Blockiert macOS die Datei: Terminal öffnen,
+   `bash ` tippen, die Datei ins Fenster ziehen, Enter (Details unter „Starten“).
 3. Warten, bis sich das Admin-Panel im Browser öffnet. Fertig.
 
 ---
@@ -44,15 +45,35 @@ Läuft alles, geht es mit der normalen [Anleitung](ANLEITUNG.md) weiter (Admin-P
 
 Im Ordner liegt die Datei **`Start-Mac.command`**.
 
-**Beim allerersten Mal** blockiert macOS Dateien aus dem Internet. So startest du sie trotzdem:
+**Beim allerersten Mal** blockiert macOS die Datei mit einer Meldung wie
+*„Apple konnte nicht überprüfen, ob „Start-Mac.command“ frei von Schadsoftware ist …“* oder
+*„… kann nicht geöffnet werden, da sie von einem nicht verifizierten Entwickler stammt“*.
+Das liegt nur daran, dass das Skript nicht bei Apple registriert ist. Es gibt drei Wege – **Weg A klappt immer**:
 
+> **Weg A – über das Terminal (empfohlen, klappt immer)**
+>
+> 1. Die Meldung mit **Fertig** bzw. **Abbrechen** schließen.
+> 2. Das Programm **Terminal** öffnen: `Cmd + Leertaste` drücken, „Terminal“ tippen, Enter.
+> 3. `bash ` eintippen – mit einem **Leerzeichen** am Ende.
+> 4. Die Datei **`Start-Mac.command`** aus dem Finder in das Terminal-Fenster **ziehen**. Der Pfad wird eingefügt.
+> 5. **Enter** drücken – die Wall of Content startet.
+>
+> So startest du sie auch in Zukunft. Die Schutzprüfung von macOS greift hier nicht, weil das Terminal das Skript
+> direkt ausführt.
+
+**Weg B – Freigabe in den Systemeinstellungen** (danach reicht ein Doppelklick):
+
+- **macOS 15 (Sequoia) und neuer:** Meldung mit **Fertig** schließen → **Systemeinstellungen → Datenschutz & Sicherheit** →
+  ganz nach unten scrollen → bei „Start-Mac.command wurde blockiert …“ auf **Dennoch öffnen** klicken → mit
+  Passwort/Touch ID bestätigen → im nächsten Fenster noch einmal **Dennoch öffnen**.
 - **macOS 14 (Sonoma) und älter:** **Rechtsklick** (oder Ctrl + Klick) auf `Start-Mac.command` → **Öffnen** →
   im Hinweisfenster noch einmal **Öffnen**.
-- **macOS 15 (Sequoia) und neuer:** Doppelklicken → die Meldung „… wurde nicht geöffnet“ mit **Fertig** schließen →
-  **Systemeinstellungen → Datenschutz & Sicherheit** → ganz unten bei „Start-Mac.command wurde blockiert“ auf
-  **Dennoch öffnen** klicken → mit Passwort/Touch ID bestätigen.
 
-Ab dann reicht ein **Doppelklick**.
+Fehlt der Knopf „Dennoch öffnen“ (z. B. auf Firmen-Macs mit Verwaltung), Weg A nehmen.
+
+**Weg C – Sperre für den ganzen Ordner aufheben** (danach reicht ein Doppelklick):
+Terminal öffnen, `xattr -dr com.apple.quarantine ` eintippen (mit Leerzeichen am Ende), den **Ordner** der
+Wall of Content ins Terminal-Fenster ziehen und Enter drücken.
 
 Es öffnet sich ein **Terminal-Fenster** (schwarzes Fenster mit Text). Beim ersten Start passiert dort:
 
@@ -135,9 +156,9 @@ Hast du eigene Bilder in `assets/frames`, `assets/backgrounds` oder `assets/medi
 
 | Problem | Lösung |
 |---|---|
-| „Start-Mac.command kann nicht geöffnet werden, da Apple nicht prüfen kann …“ | Siehe [Starten](#2-starten): Rechtsklick → Öffnen bzw. „Dennoch öffnen“ in Datenschutz & Sicherheit. |
+| „Apple konnte nicht überprüfen, ob … frei von Schadsoftware ist“ / „… nicht verifizierter Entwickler“ | Über das Terminal starten (Weg A unter [Starten](#2-starten)) – klappt immer. |
 | Doppelklick öffnet die Datei in einem Texteditor | Rechtsklick → **Öffnen mit → Terminal**. |
-| „Permission denied“ / „Keine Berechtigung“ | Plan B unten verwenden. |
+| „Permission denied“ / „Keine Berechtigung“ | Über das Terminal starten (Weg A unter [Starten](#2-starten)). |
 | „Download von Node.js fehlgeschlagen“ | Beim ersten Start wird Internet gebraucht. WLAN prüfen und erneut starten. |
 | „Port 3000 ist schon belegt“ | Die Wall of Content läuft schon in einem anderen Terminal-Fenster – dieses benutzen oder schließen. |
 | iPads/Handys erreichen den Mac nicht | Gleiches WLAN? Netzwerkzugriff für „node“ erlaubt (siehe oben)? Im Gäste-WLAN mancher Router sind Geräte voneinander abgeschirmt – dann ein anderes WLAN oder einen eigenen Router verwenden. |
@@ -147,12 +168,7 @@ Hast du eigene Bilder in `assets/frames`, `assets/backgrounds` oder `assets/medi
 
 ### Plan B: Start über das Terminal
 
-Funktioniert der Doppelklick gar nicht, geht es immer so:
-
-1. Das Programm **Terminal** öffnen (Spotlight: `Cmd + Leertaste`, „Terminal“ tippen, Enter).
-2. `bash ` eintippen (mit Leerzeichen am Ende).
-3. Die Datei **`Start-Mac.command`** aus dem Finder ins Terminal-Fenster **ziehen** – der Pfad wird eingefügt.
-4. **Enter** drücken.
+Das ist Weg A unter [Starten](#2-starten) – er funktioniert immer, auch wenn macOS den Doppelklick blockiert.
 
 ### Plan C: Mit installiertem Node.js
 

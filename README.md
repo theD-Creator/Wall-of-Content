@@ -6,7 +6,8 @@
 - [Start auf dem Mac](docs/MAC.md) – per Doppelklick, ohne Installation ([als PDF zum Ausdrucken](docs/Wall-of-Content-Mac-Anleitung.pdf))
 - [Technische Dokumentation](docs/TECHNIK.md) – Aufbau, Daten, API, Sicherheit
 
-**Mac:** Ordner entpacken, `Start-Mac.command` mit Rechtsklick → Öffnen starten – fertig ([Details](docs/MAC.md)).
+**Mac:** Ordner entpacken, `Start-Mac.command` doppelklicken. Blockiert macOS die Datei („Apple konnte nicht überprüfen …“):
+Terminal öffnen, `bash ` tippen, die Datei ins Fenster ziehen, Enter ([Details](docs/MAC.md)).
 
 Ein Bildschirm mit schwebenden Thumbnails (Bilder & Videos) – plus Fotostationen fürs Handy und ein Admin-Panel.
 
