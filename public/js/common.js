@@ -45,7 +45,7 @@ function connectEvents(role, name, handlers, extra = {}) {
     if (!first && handlers.reconnect) handlers.reconnect();
     first = false;
   });
-  for (const type of ['items', 'settings', 'devices', 'command', 'hunt', 'quiz', 'grid']) {
+  for (const type of ['items', 'settings', 'devices', 'command', 'hunt', 'quiz', 'grid', 'program', 'challenges', 'shop', 'feedback']) {
     es.addEventListener(type, (e) => handlers[type] && handlers[type](JSON.parse(e.data)));
   }
   return es;

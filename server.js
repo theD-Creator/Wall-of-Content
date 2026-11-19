@@ -7,6 +7,7 @@
  *  /p/:id    Download-Seite eines Fotos (Ziel des QR-Codes)
  *  /hunt     Color Hunt (Gäste-Handy)
  *  /quiz     Quiz (iPad); zeigt die Wall, solange kein Quiz läuft
+ *  /app      Besucher-App: Live-Programm, Challenges, Merch-Shop, Feedback (lib/portal.js)
  */
 const express = require('express');
 const http = require('http');
@@ -80,6 +81,10 @@ const SETTINGS = {
   gridCols: { type: 'int', min: 1, max: 8, def: 3 },
   gridRows: { type: 'int', min: 1, max: 4, def: 1 },
   gridAspect: { type: 'enum', values: ['4:3', '16:10', '16:9', '3:4', '9:16'], def: '4:3' },
+  // Besucher-App: Punkte für den digitalen Rundgang, QR-Code zur App auf der Wall
+  stationPoints: { type: 'int', min: 0, max: 10000, def: 10 },
+  tourBonus: { type: 'int', min: 0, max: 100000, def: 50 },
+  portalQr: { type: 'bool', def: false },
   huntMinutes: { type: 'int', min: 1, max: 30, def: 5 },
   huntPhotos: { type: 'int', min: 1, max: 10, def: 5 },
   qrTimeout: { type: 'int', min: 10, max: 600, def: 60 },
@@ -137,7 +142,7 @@ const emptyQuiz = () => ({
   active: false, showBoard: false, scores: [],
   questions: DEFAULT_QUESTIONS.map(([text, answers, correct]) => ({ id: newId(), text, answers, correct })),
 });
-let db = { settings: defaults(), items: [], assets: { frames: {}, backgrounds: {} }, hunt: emptyHunt(), quiz: emptyQuiz(), users: [] };
+let db = { settings: defaults(), items: [], assets: { frames: {}, backgrounds: {} }, hunt: emptyHunt(), quiz: emptyQuiz(), users: [], portal: {} };
 try {
   const raw = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
   const known = Object.fromEntries(Object.entries(raw.settings || {}).filter(([k]) => Object.hasOwn(SETTINGS, k)));
@@ -145,6 +150,7 @@ try {
   db.hunt = { ...emptyHunt(), ...(raw.hunt || {}) };
   db.quiz = { ...emptyQuiz(), ...(raw.quiz || {}) };
   db.users = Array.isArray(raw.users) ? raw.users : [];
+  db.portal = raw.portal && typeof raw.portal === 'object' ? raw.portal : {};
   db.items = Array.isArray(raw.items) ? raw.items : [];
   db.assets = { frames: {}, backgrounds: {}, ...(raw.assets || {}) };
 } catch (e) {
@@ -397,7 +403,7 @@ function broadcast(type, data = {}, roles) {
   for (const c of clients) if (!roles || roles.includes(c.role)) send(c, type, data);
 }
 const deviceList = () => [...clients]
-  .filter((c) => c.role !== 'admin')
+  .filter((c) => c.role !== 'admin' && c.role !== 'visitor')
   .map((c) => ({ id: c.id, role: c.role, name: c.name, ip: c.ip, since: c.since }));
 const devicesChanged = () => broadcast('devices', { devices: deviceList() }, ['admin']);
 setInterval(() => { for (const c of clients) c.res.write(': ping\n\n'); }, 25_000).unref();
@@ -462,9 +468,9 @@ app.get('/api/wall', (_req, res) => {
 });
 
 app.get('/api/events', (req, res) => {
-  const role = ['wall', 'station', 'admin', 'quiz'].includes(req.query.role) ? req.query.role : 'wall';
+  const role = ['wall', 'station', 'admin', 'quiz', 'visitor'].includes(req.query.role) ? req.query.role : 'wall';
   if (role === 'admin' && !isAdmin(req)) return res.status(401).end();
-  if (clients.size >= 300) return res.status(503).end();
+  if (clients.size >= 2000) return res.status(503).end();
   res.writeHead(200, {
     'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no',
   });
@@ -476,9 +482,10 @@ app.get('/api/events', (req, res) => {
   };
   clients.add(client);
   send(client, 'hello', {});
-  if (role !== 'admin') devicesChanged();
+  const isDevice = role !== 'admin' && role !== 'visitor'; // Besucher-Handys nicht in der Geräteliste
+  if (isDevice) devicesChanged();
   gridCheck();
-  req.on('close', () => { clients.delete(client); if (role !== 'admin') devicesChanged(); gridCheck(); });
+  req.on('close', () => { clients.delete(client); if (isDevice) devicesChanged(); gridCheck(); });
 });
 
 // Foto von einer Fotostation
@@ -664,7 +671,9 @@ app.get('/api/admin/overview', requireAdmin, async (req, res) => {
     users: db.users.map(publicUser),
     me: publicUser(req.user),
     grid: { cols: db.settings.gridCols, rows: db.settings.gridRows },
+    visitorsOnline: [...clients].filter((c) => c.role === 'visitor').length,
     urls: {
+      portal: `${publicBase(req)}/app`,
       quiz: `http://${host}:${PORT}/quiz`,
       hunt: `${publicBase(req)}/hunt`,
       wall: `http://${host}:${PORT}/`,
@@ -1268,6 +1277,14 @@ function gridCheck() {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Besucher-App: Programm, Challenges, Shop, Feedback (lib/portal.js)  */
+/* ------------------------------------------------------------------ */
+require('./lib/portal')({
+  app, express, getDb: () => db, settings: () => db.settings, save, broadcast, requireAdmin, isAdmin, clean, newId, sha,
+  cookies, rateLimit, sameOrigin, publicBase, QRCode, escapeHtml, UPLOADS, contentType, page, ROOT, logoUrl,
+});
+
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Nicht gefunden' }));
 app.use((_req, res) => res.status(404).type('text').send('Nicht gefunden'));
 // eslint-disable-next-line no-unused-vars
@@ -1362,6 +1379,7 @@ async function main() {
   Admin-Panel:         http://localhost:${PORT}/admin   (im Netzwerk: http://${ip}:${PORT}/admin)
   Color Hunt (Gäste):  ${db.settings.publicUrl || `http://${ip}:${PORT}`}/hunt
   Quiz (iPad):         http://${ip}:${PORT}/quiz
+  Besucher-App:        ${db.settings.publicUrl || `http://${ip}:${PORT}`}/app   (Programm, Challenges, Shop, Feedback)
 
   Anmeldung im Admin-Panel als ${globalAdmin().name} (Global Admin)
   Passwort:            ${process.env.ADMIN_PASSWORD ? '(aus ADMIN_PASSWORD)' : startPassword ? `${startPassword}   (Startpasswort, steht auch in ${pwFile.startsWith(ROOT) ? path.relative(ROOT, pwFile) : pwFile})` : '(wurde im Admin-Panel geändert)'}

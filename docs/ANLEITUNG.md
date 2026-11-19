@@ -12,10 +12,11 @@ Diese Anleitung erklärt, wie du die Wall of Content startest, einrichtest und w
 6. [Fotostation](#6-fotostation)
 7. [Color Hunt](#7-color-hunt)
 8. [Quiz auf dem iPad](#8-quiz-auf-dem-ipad)
-9. [Verbund-Wall aus mehreren iPads (experimentell)](#9-verbund-wall-aus-mehreren-ipads-experimentell)
-10. [Einstellungen](#10-einstellungen)
-11. [Checkliste für den Veranstaltungstag](#11-checkliste-für-den-veranstaltungstag)
-12. [Probleme und Lösungen](#12-probleme-und-lösungen)
+9. [Besucher-App: Programm, Challenges, Merch-Shop, Feedback](#9-besucher-app-programm-challenges-merch-shop-feedback)
+10. [Verbund-Wall aus mehreren iPads (experimentell)](#10-verbund-wall-aus-mehreren-ipads-experimentell)
+11. [Einstellungen](#11-einstellungen)
+12. [Checkliste für den Veranstaltungstag](#12-checkliste-für-den-veranstaltungstag)
+13. [Probleme und Lösungen](#13-probleme-und-lösungen)
 
 ---
 
@@ -28,6 +29,7 @@ Ein Laptop ist der **Server**. Alle anderen Geräte öffnen nur eine Adresse im 
 | Großer Bildschirm / Beamer | `http://<laptop-ip>:3000/` | Die **Wall** mit schwebenden Bildern und Videos |
 | Handy oder Tablet an der Fotostation | `https://<laptop-ip>:3443/station` | **Fotostation**: Rahmen wählen, Foto machen, QR-Code |
 | iPad für Kinder | `http://<laptop-ip>:3000/quiz` | **Quiz** – zeigt die Wall, solange kein Quiz läuft |
+| Handys der Gäste | `http://<laptop-ip>:3000/app` | **Besucher-App**: Live-Programm, Challenges, Merch-Shop, Feedback |
 | Handys der Gäste | `http://<laptop-ip>:3000/hunt` | **Color Hunt** (Gäste scannen den QR-Code auf der Wall) |
 | Mehrere iPads nebeneinander | `http://<laptop-ip>:3000/?pos=1`, `?pos=2`, … | **Verbund-Wall** (experimentell) |
 | Dein Laptop/Handy | `http://<laptop-ip>:3000/admin` | **Admin-Panel** zum Steuern |
@@ -291,7 +293,126 @@ Im Tab **Quiz** kannst du:
 
 ---
 
-## 9. Verbund-Wall aus mehreren iPads (experimentell)
+## 9. Besucher-App: Programm, Challenges, Merch-Shop, Feedback
+
+Die **Besucher-App** läuft auf den Handys der Gäste unter `http://<laptop-ip>:3000/app` – ohne Installation und ohne
+Anmeldung. Unten gibt es vier Bereiche: **Programm**, **Challenges**, **Shop** und **Feedback**; oben steht immer der
+Punktestand.
+
+- Den QR-Code zur App findest du im Admin-Panel im Tab **Programm**. Mit dem Schalter **„QR-Code zur Besucher-App auf der
+  Wall zeigen“** erscheint er unten links auf der Wall (über dem Color-Hunt-Code, falls der gerade läuft).
+- Jeder Gast bekommt beim ersten Öffnen automatisch ein **anonymes Profil** auf seinem Handy. Daran hängen Punkte, Stempel,
+  Coupons und Feedback – Namen werden nicht gespeichert.
+- Unter **Challenges → „Dein Besucher-Code“** steht ein Code wie `U7QS-AWF3`. Damit nimmt man seinen Fortschritt auf ein
+  anderes Handy oder in einen anderen Browser mit (z. B. wenn der Akku leer ist).
+- Alles, was ihr im Admin-Panel ändert, erscheint **sofort** auf allen Handys – niemand muss neu laden.
+
+![Wall mit QR-Codes zur Besucher-App und zum Color Hunt](screenshots/wall-zwei-qr.jpg)
+
+### Live-Programm
+
+**Einrichten (Tab „Programm“):** Titel, kurze Beschreibung, Datum, Beginn und Ende eintragen, optional
+**★ Als Highlight hervorheben**, speichern. Mit ▲ ▼ legst du die Reihenfolge fest, **„Nach Uhrzeit sortieren“** ordnet
+alles automatisch. Programmpunkte lassen sich jederzeit bearbeiten und löschen.
+
+![Programm im Admin-Panel](screenshots/admin-programm.jpg)
+
+**Für die Gäste:** Oben steht groß, was **jetzt live** läuft (mit Restzeit) bzw. was **als Nächstes** kommt. In der
+Liste ist der laufende Punkt pink markiert und mit Fortschrittsbalken versehen, der nächste trägt „Gleich“, vergangene
+sind ausgegraut und durchgestrichen. Das aktualisiert sich automatisch anhand der Uhrzeit.
+
+| Programm | Challenges | Stempel erhalten |
+|---|---|---|
+| ![Programm](screenshots/app-programm.jpg) | ![Challenges](screenshots/app-challenges.jpg) | ![Stempel](screenshots/app-stempel.jpg) |
+
+### Challenges – QR-Code-Challenge (Schatzsuche)
+
+Es gibt bereits eine Challenge **„Finde den versteckten QR-Code auf dem Gelände!“**.
+
+1. Im Tab **Challenges** auf **🖨️ Drucken** klicken (oder **⬇️ PNG** herunterladen), ausdrucken und auf dem Gelände verstecken.
+2. Optional einen **Tipp** und die **Punkte** festlegen (Standard: 50). Weitere Challenges kannst du unten hinzufügen,
+   mit dem Schalter **Aktiv** pausierst du eine.
+3. Wer den Code findet, scannt ihn – mit der **Kamera-App** des Handys oder in der Besucher-App mit **„📷 QR-Code scannen“**.
+   Die Challenge wird abgehakt und die Punkte gutgeschrieben.
+
+**Sicherheit:** Jeder QR-Code enthält einen eigenen, nicht erratbaren Schlüssel. Ein beliebiger anderer QR-Code wird
+abgelehnt („Unbekannter QR-Code“), und jede Challenge zählt pro Person nur **einmal**. Ist ein Foto des Codes im Umlauf,
+macht **„Neuer Code“** den alten Ausdruck ungültig – danach neu ausdrucken.
+
+### Challenges – Digitaler Rundgang mit Stempeln
+
+1. Im Tab **Challenges** unter **Digitaler Rundgang** jede Station bzw. AG mit **Name** und **Beschreibung** anlegen.
+2. **🖨️ Alle Stations-Codes drucken** – pro Station eine A4-Seite mit großem QR-Code. Alternativ einzeln drucken oder als PNG
+   aufs Handy des Coaches laden.
+3. An der Station zeigt der Coach den Code, der Gast scannt ihn → die Station bekommt einen **Stempel** und
+   **10 Punkte** (einstellbar). Wer **alle** Stationen schafft, sieht eine Abschlussmeldung und bekommt **50 Bonuspunkte**
+   (einstellbar).
+4. Gäste sehen jederzeit ihren Fortschritt, z. B. „2 von 3 Stationen besucht“.
+
+![Druckansicht einer Station](screenshots/druck-station.jpg)
+
+In der **Auswertung** siehst du, wie viele Besucher an jeder Station waren und wie viele den Rundgang komplett haben.
+
+![Challenges im Admin-Panel](screenshots/admin-challenges.jpg)
+
+> **Scannen in der App:** Die Live-Kamera im Browser gibt es nur über HTTPS. Über die normale Adresse (`http://…:3000/app`)
+> öffnet der Scanner stattdessen die Kamera für ein **Foto vom QR-Code** – das wird sofort ausgewertet. Am einfachsten
+> ist ohnehin die **Kamera-App** des Handys: QR-Code scannen, Link antippen, fertig.
+
+![Scanner in der Besucher-App](screenshots/app-scanner.jpg)
+
+### Merch-Shop mit Coupons
+
+**Einrichten (Tab „Shop“):** Artikel mit Name, Beschreibung, **Preis in Punkten**, optional **Bestand** (leer = unbegrenzt)
+und Bild anlegen. Mit **„Im Shop sichtbar“** blendest du Artikel ein und aus.
+
+**Für die Gäste:** Im Shop sehen sie ihre Punkte und alle Artikel. Reichen die Punkte, tippen sie auf **„Coupon holen“** –
+die Punkte werden abgezogen und es erscheint ein **Coupon mit QR-Code und Code**. Alle Coupons stehen unter „Meine Coupons“.
+
+| Shop | Coupon zum Vorzeigen | Nach dem Einlösen |
+|---|---|---|
+| ![Shop](screenshots/app-shop.jpg) | ![Coupon](screenshots/app-coupon.jpg) | ![Eingelöst](screenshots/app-coupon-eingeloest.jpg) |
+
+**Am Merch-Stand einlösen** – nur angemeldete Team-Mitglieder können einlösen:
+
+- **Am schnellsten:** Den Coupon-QR-Code mit der **Kamera-App** eines Handys scannen, auf dem ihr im Admin-Panel angemeldet
+  seid. Es öffnet sich die Einlöse-Seite → **„Jetzt einlösen“**.
+- **Im Admin-Panel:** Tab **Shop → Coupon prüfen & einlösen**, Code eintippen oder **📷 Scannen**, dann **„Jetzt einlösen“**.
+
+Danach ist der Coupon **gesperrt**: Auf dem Handy des Gastes steht sofort „EINGELÖST“, und ein zweiter Versuch zeigt
+„Bereits eingelöst am … (Name)“. Ein noch nicht eingelöster Coupon kann **storniert** werden – die Punkte gehen zurück.
+
+| Coupon prüfen im Admin-Panel | Einlöse-Seite: schon eingelöst |
+|---|---|
+| ![Coupon prüfen](screenshots/admin-coupon-pruefen.jpg) | ![Schon eingelöst](screenshots/einloesen-schon.jpg) |
+
+![Shop im Admin-Panel](screenshots/admin-shop.jpg)
+
+### Feedback
+
+**Für die Gäste:** „Wie gefällt dir die Urban Art Night?“ – einen der fünf Smileys antippen, optional einen Text schreiben,
+**„Feedback senden“**. Das Feedback ist **anonym**. Pro Handy gibt es **eine** Bewertung; wer nochmal sendet, ändert seine
+bestehende Bewertung (so wird nichts doppelt gezählt).
+
+| Feedback geben | Bestätigung |
+|---|---|
+| ![Feedback](screenshots/app-feedback.jpg) | ![Danke](screenshots/app-feedback-danke.jpg) |
+
+**Auswertung (Tab „Feedback“):** Durchschnittsbewertung, Verteilung der Smileys als Diagramm und alle Texte. Sortieren
+nach Datum oder Bewertung, filtern nach Smiley, „Nur mit Text“ und „Nur ungelesene“, als gelesen markieren, löschen und
+**als CSV für Excel** herunterladen.
+
+![Feedback im Admin-Panel](screenshots/admin-feedback.jpg)
+
+### Vor der Veranstaltung: Testdaten löschen
+
+Nach dem Ausprobieren im Tab **Challenges → Zurücksetzen → „Fortschritt aller Besucher löschen“** klicken (löscht Profile,
+Punkte, Stempel und Coupons – Stationen, Challenges und Artikel bleiben). Test-Feedback löscht ihr im Tab **Feedback**
+mit **„Alle löschen“**.
+
+---
+
+## 10. Verbund-Wall aus mehreren iPads (experimentell)
 
 Mehrere iPads (oder Bildschirme) nebeneinander bilden zusammen **eine große Wall**. Die Kacheln wandern dabei von einem
 Bildschirm zum nächsten.
@@ -319,7 +440,7 @@ Bildschirm zum nächsten.
 
 ---
 
-## 10. Einstellungen
+## 11. Einstellungen
 
 ![Einstellungen](screenshots/admin-einstellungen.jpg)
 
@@ -340,7 +461,7 @@ die Wall oder Stationen neu laden und einen geöffneten Inhalt auf der Wall schl
 
 ---
 
-## 11. Checkliste für den Veranstaltungstag
+## 12. Checkliste für den Veranstaltungstag
 
 1. Laptop ans Strom- und Event-WLAN, `npm start`.
 2. Im Admin-Panel anmelden, **Übersicht** öffnen.
@@ -349,11 +470,13 @@ die Wall oder Stationen neu laden und einen geöffneten Inhalt auf der Wall schl
 5. Quiz-iPad: Adresse öffnen (zeigt erst die Wall), Geführten Zugriff aktivieren.
 6. Optional Verbund-iPads mit ihren Positionen öffnen.
 7. Unter **Übersicht → Verbundene Geräte** prüfen, dass alles verbunden ist.
-8. Wenn es losgeht: Quiz starten, Color-Hunt-Countdown starten.
+8. Besucher-App vorbereiten: Programm eintragen, Stations-Codes und den versteckten QR-Code ausdrucken und verteilen,
+   Merch-Artikel anlegen, Testdaten löschen (Challenges → Zurücksetzen), QR-Code der Besucher-App auf der Wall einschalten.
+9. Wenn es losgeht: Quiz starten, Color-Hunt-Countdown starten.
 
 ---
 
-## 12. Probleme und Lösungen
+## 13. Probleme und Lösungen
 
 | Problem | Lösung |
 |---|---|
@@ -361,6 +484,9 @@ die Wall oder Stationen neu laden und einen geöffneten Inhalt auf der Wall schl
 | Fotostation zeigt keine Kamera | Adresse muss mit `https://` und Port `3443` beginnen; Zertifikatswarnung bestätigen; Kamera erlauben. Ohne Kamera-Freigabe öffnet der Auslöser die Kamera-App. |
 | QR-Code zum Download funktioniert nicht | Einstellungen → „Öffentliche Adresse für QR-Codes“ auf `http://<laptop-ip>:3000` setzen. |
 | Hintergrundvideo läuft nicht | MP4 (H.264) oder WebM verwenden; sehr große Dateien vorher verkleinern. |
+| Ein Gast hat seine Punkte „verloren“ | Anderer Browser oder Daten gelöscht? Mit dem Besucher-Code (Challenges → „Dein Besucher-Code“) wiederherstellen. |
+| Scanner in der Besucher-App zeigt kein Livebild | Normal über `http://` – „Foto vom QR-Code machen“ oder die Kamera-App des Handys nutzen. |
+| Coupon lässt sich nicht einlösen | Nur angemeldete Team-Mitglieder können einlösen; „Bereits eingelöst“ heißt: der Coupon wurde schon verwendet. |
 | Benutzer kann sich nicht anmelden | David R. muss im Tab **Benutzer** zuerst ein Passwort festlegen. |
 | Passwort vergessen | Server mit `ADMIN_PASSWORD=neuesPasswort npm start` starten (gilt für den Global Admin). |
 | Alles zurücksetzen | Server stoppen, Ordner `data/` sichern und dann löschen, neu starten. |

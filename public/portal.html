@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000a3e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Urban Art Night</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="portal">
+  <div id="bg" class="wall-bg"></div>
+
+  <header class="p-head">
+    <div class="p-title"><small id="pEvent"></small><b id="pTab">Programm</b></div>
+    <a class="p-points" href="#shop" aria-label="Meine Punkte"><span aria-hidden="true">⭐</span><b id="pPoints">0</b></a>
+  </header>
+
+  <main class="p-main">
+    <!-- ===================== Programm ===================== -->
+    <section class="p-tab" data-tab="programm">
+      <div id="nowCard"></div>
+      <ol id="programList" class="timeline"></ol>
+    </section>
+
+    <!-- ===================== Challenges ===================== -->
+    <section class="p-tab" data-tab="challenges">
+      <button class="btn primary big scan-btn" data-scan>📷 QR-Code scannen</button>
+      <a id="huntLink" class="p-card hunt-link" href="/hunt" hidden><b>🎨 Color Hunt läuft!</b><span>Jetzt mitmachen →</span></a>
+
+      <h2 class="p-h">🔍 QR-Code-Challenge</h2>
+      <div id="qrList" class="p-list"></div>
+
+      <h2 class="p-h">🗺️ Digitaler Rundgang</h2>
+      <div class="p-card tour-head">
+        <div class="tour-top"><b id="tourText"></b><span id="tourPts" class="muted small"></span></div>
+        <div class="tour-bar"><i id="tourBar"></i></div>
+        <p class="muted small">Besuche die Stationen und AGs. Dort zeigt dir ein Coach einen QR-Code – scannen, Stempel bekommen!</p>
+      </div>
+      <div id="tourDone" class="p-card tour-done" hidden></div>
+      <div id="stations" class="stamps"></div>
+
+      <details class="p-card p-code">
+        <summary>🔑 Dein Besucher-Code: <b id="myCode"></b></summary>
+        <p class="muted small">Mit diesem Code nimmst du Punkte, Stempel und Coupons auf ein anderes Handy oder in einen anderen Browser mit.
+          Du musst dich nicht anmelden – alles bleibt anonym.</p>
+        <form id="restoreForm" class="row">
+          <input id="restoreCode" maxlength="9" placeholder="Code eingeben, z. B. ABCD-1234" autocomplete="off" autocapitalize="characters">
+          <button class="btn small">Übernehmen</button>
+        </form>
+      </details>
+    </section>
+
+    <!-- ===================== Shop ===================== -->
+    <section class="p-tab" data-tab="shop">
+      <div class="p-card balance">
+        <div><small class="muted">Deine Punkte</small><b id="shopPoints">0</b></div>
+        <p class="muted small">Punkte sammelst du bei den Challenges. Tausche sie hier gegen Merch-Coupons und zeig den Coupon am Merch-Stand.</p>
+      </div>
+      <div id="shopItems" class="shop-grid"></div>
+      <h2 class="p-h">🎟️ Meine Coupons</h2>
+      <div id="coupons" class="p-list"></div>
+    </section>
+
+    <!-- ===================== Feedback ===================== -->
+    <section class="p-tab" data-tab="feedback">
+      <div id="fbThanks" class="p-card fb-thanks" hidden>
+        <div class="fb-big" id="fbThanksIcon">💖</div>
+        <h2>Danke für dein Feedback!</h2>
+        <p class="muted">Deine Meinung hilft uns, die nächste Urban Art Night noch besser zu machen.</p>
+        <button id="fbEdit" class="btn small">Bewertung ändern</button>
+      </div>
+      <form id="fbForm" class="p-card fb-form">
+        <h2>Wie gefällt dir die Urban Art Night?</h2>
+        <div class="smileys" role="radiogroup" aria-label="Bewertung">
+          <label><input type="radio" name="rating" value="1"><span>😖</span><small>Sehr schlecht</small></label>
+          <label><input type="radio" name="rating" value="2"><span>🙁</span><small>Schlecht</small></label>
+          <label><input type="radio" name="rating" value="3"><span>😐</span><small>Okay</small></label>
+          <label><input type="radio" name="rating" value="4"><span>🙂</span><small>Gut</small></label>
+          <label><input type="radio" name="rating" value="5"><span>😍</span><small>Sehr gut</small></label>
+        </div>
+        <textarea id="fbText" maxlength="1000" rows="4" placeholder="Was möchtest du uns noch sagen?"></textarea>
+        <button class="btn primary big">Feedback senden</button>
+        <p class="muted small">Anonym – wir speichern keine Namen.</p>
+      </form>
+    </section>
+  </main>
+
+  <nav class="p-nav" aria-label="Bereiche">
+    <a href="#programm" data-nav="programm"><span>📅</span>Programm</a>
+    <a href="#challenges" data-nav="challenges"><span>🎯</span>Challenges</a>
+    <a href="#shop" data-nav="shop"><span>🛍️</span>Shop</a>
+    <a href="#feedback" data-nav="feedback"><span>💬</span>Feedback</a>
+  </nav>
+
+  <!-- Coupon -->
+  <dialog id="couponDlg" class="p-dialog coupon-dlg">
+    <h2 id="cpName"></h2>
+    <div class="cp-qr"><img id="cpQr" alt="Coupon-QR-Code"><div id="cpUsed" class="cp-used" hidden><span>EINGELÖST</span></div></div>
+    <p class="cp-code" id="cpCode"></p>
+    <p id="cpInfo" class="muted small"></p>
+    <button class="btn primary" data-close>Fertig</button>
+  </dialog>
+
+  <!-- Ergebnis nach dem Scannen -->
+  <div id="result" class="p-result" hidden>
+    <div class="p-result-card">
+      <div id="resIcon" class="res-icon"></div>
+      <h2 id="resTitle"></h2>
+      <p id="resText"></p>
+      <button class="btn primary big" id="resOk">Weiter</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="/js/common.js"></script>
+  <script src="/js/qrscan.js"></script>
+  <script src="/js/portal.js"></script>
+</body>
+</html>

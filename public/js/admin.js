@@ -83,7 +83,8 @@
       stat(data.items.filter((i) => i.onWall).length, 'Inhalte auf der Wall'),
       stat(media.length, 'Bilder & Videos'),
       stat(photos.length, 'Fotos von Stationen'),
-      stat(data.devices.filter((d) => d.role === 'station').length, 'Stationen online'));
+      stat(data.devices.filter((d) => d.role === 'station').length, 'Stationen online'),
+      stat(data.visitorsOnline, 'Besucher-App gerade offen'));
 
     const urlRow = (label, url, hint) => el('div', { class: 'url' },
       el('img', { src: '/api/admin/qr.svg?text=' + encodeURIComponent(url), alt: 'QR-Code', class: 'url-qr' }),
@@ -91,7 +92,8 @@
     $('#urls').replaceChildren(
       urlRow('Wall (großer Bildschirm)', data.urls.wall, 'Im Browser öffnen, Taste F = Vollbild.'),
       urlRow('Fotostation (Handy/Tablet)', data.urls.station, 'QR-Code mit dem Stations-Handy scannen. Zertifikatswarnung einmalig bestätigen, damit die Kamera funktioniert.'),
-      urlRow('Quiz (iPad)', data.urls.quiz, 'Zeigt die Wall, bis das Quiz im Tab „Quiz“ gestartet wird.'));
+      urlRow('Quiz (iPad)', data.urls.quiz, 'Zeigt die Wall, bis das Quiz im Tab „Quiz“ gestartet wird.'),
+      urlRow('Besucher-App (Gäste-Handys)', data.urls.portal, 'Programm, Challenges, Merch-Shop und Feedback. Den QR-Code kannst du im Tab „Programm“ auch auf der Wall zeigen.'));
     const n = data.grid.cols * data.grid.rows;
     $('#gridLinks').replaceChildren(...Array.from({ length: n }, (_, i) => {
       const url = `${data.urls.wall}?pos=${i + 1}`;
@@ -549,22 +551,31 @@
     loading = loading || new Promise((r) => setTimeout(r, 80)).then(async () => {
       loading = null;
       data = await call('/api/admin/overview');
+      data.portal = await call('/api/admin/portal');
       data.loadedAt = Date.now();
       renderOverview(); renderItems(); renderAssets(); renderSettings(); renderHunt(); renderQuiz();
+      for (const render of window.adminExtensions || []) render(data); // Programm, Challenges, Shop, Feedback (admin-portal.js)
       if (!($('#users').contains(document.activeElement) && document.activeElement.tagName === 'INPUT')) renderUsers(); // nicht beim Tippen überschreiben
     }).catch(() => { loading = null; });
     return loading;
   }
 
+  // Schnittstelle für admin-portal.js
+  window.adminApi = { call, toast, load: () => load(), fmtTime };
+
   async function start() {
     const me = await api('/api/admin/me');
     if (!me.admin) return showLogin();
+    // nach dem Anmelden zurück zur Seite, von der man kam (z. B. Coupon einlösen)
+    const next = new URLSearchParams(location.search).get('next') || '';
+    if (/^\/einloesen\/[A-Za-z0-9-]{1,20}$/.test(next)) { location.href = next; return; }
     $('#login').hidden = true;
     $('#app').hidden = false;
     await load();
     if (events) events.close();
     events = connectEvents('admin', 'Admin', {
       items: load, settings: load, reconnect: load, hunt: load, quiz: load,
+      program: load, challenges: load, shop: load, feedback: load,
       devices: (d) => { if (data) { data.devices = d.devices; renderOverview(); } },
     });
   }

@@ -2,7 +2,7 @@
 
 📖 **Dokumentation**
 
-- [Anleitung mit Screenshots](docs/ANLEITUNG.md) – Bedienung von Wall, Fotostation, Color Hunt, Quiz und Admin-Panel
+- [Anleitung mit Screenshots](docs/ANLEITUNG.md) – Bedienung von Wall, Fotostation, Color Hunt, Quiz, Besucher-App und Admin-Panel
 - [Start auf dem Mac](docs/MAC.md) – per Doppelklick, ohne Installation ([als PDF zum Ausdrucken](docs/Wall-of-Content-Mac-Anleitung.pdf))
 - [Technische Dokumentation](docs/TECHNIK.md) – Aufbau, Daten, API, Sicherheit
 
@@ -18,6 +18,7 @@ Ein Bildschirm mit schwebenden Thumbnails (Bilder & Videos) – plus Fotostation
 | **Admin-Panel** | `http://<laptop-ip>:3000/admin` | Inhalte, Fotos, Color Hunt, Rahmen, Hintergründe, Einstellungen, Fernsteuerung. |
 | **Color Hunt** | `http://<laptop-ip>:3000/hunt` | Gäste scannen den QR-Code auf der Wall und machen mit dem eigenen Handy mit. |
 | **Quiz** | `http://<laptop-ip>:3000/quiz` | Quiz mit Rangliste für das iPad; zeigt die Wall, solange kein Quiz läuft. |
+| **Besucher-App** | `http://<laptop-ip>:3000/app` | Auf den Handys der Gäste: Live-Programm, Challenges (QR-Schatzsuche, digitaler Rundgang mit Stempeln), Merch-Shop mit Coupons, Feedback. |
 | **Verbund-Wall** | `http://<laptop-ip>:3000/?pos=1` … | Experimentell: mehrere iPads nebeneinander bilden eine große Wall. |
 
 ## Starten

@@ -29,9 +29,10 @@ Für alle, die die Wall of Content betreiben, anpassen oder weiterentwickeln. Di
 
 | Pfad | Inhalt |
 |---|---|
-| `server.js` | Der komplette Server: Einstellungen, Speicherung, Anmeldung, alle API-Routen, Color Hunt, Quiz, Verbund-Wall |
-| `public/` | Ausgelieferte Seiten: `wall.html`, `station.html`, `hunt.html`, `quiz.html`, `admin.html` |
-| `public/js/` | `common.js` (gemeinsame Helfer), `wall.js`, `station.js`, `hunt.js`, `quiz.js`, `admin.js` |
+| `server.js` | Der Server: Einstellungen, Speicherung, Anmeldung, API-Routen, Color Hunt, Quiz, Verbund-Wall |
+| `lib/portal.js` | Besucher-App: Besucherprofile, Live-Programm, Challenges, Merch-Shop mit Coupons, Feedback |
+| `public/` | Ausgelieferte Seiten: `wall.html`, `station.html`, `hunt.html`, `quiz.html`, `portal.html` (Besucher-App), `redeem.html` (Coupon einlösen), `admin.html` |
+| `public/js/` | `common.js` (gemeinsame Helfer), `qrscan.js` (QR-Scanner), `wall.js`, `station.js`, `hunt.js`, `quiz.js`, `portal.js`, `redeem.js`, `admin.js`, `admin-portal.js`, `print.js` |
 | `public/css/style.css` | Ein gemeinsames Stylesheet für alle Seiten |
 | `assets/frames/` | Rahmen der Fotostation (werden automatisch erkannt) |
 | `assets/backgrounds/` | Hintergründe – Bilder oder Videos (MP4/WebM) |
@@ -46,7 +47,7 @@ Für alle, die die Wall of Content betreiben, anpassen oder weiterentwickeln. Di
 
 | Datei/Ordner | Inhalt |
 |---|---|
-| `db.json` | Einstellungen, Liste aller Inhalte und Fotos, Color-Hunt-Teilnehmer, Quizfragen und Rangliste, Benutzer (Passwörter nur als scrypt-Hash) |
+| `db.json` | Einstellungen, Liste aller Inhalte und Fotos, Color-Hunt-Teilnehmer, Quizfragen und Rangliste, Benutzer (Passwörter nur als scrypt-Hash) und unter `portal` die Besucher-App: Programm, Challenges, Stationen, erledigte Challenges, Besucherprofile, Shop-Artikel, Coupons, Feedback |
 | `uploads/` | Hochgeladene Medien, Fotos der Stationen, Color-Hunt-Fotos, Vorschaubilder |
 | `admin-password.txt` | Startpasswort des Global Admins – wird gelöscht, sobald er sein Passwort ändert |
 | `https-key.pem`, `https-cert.pem` | Selbst erzeugtes HTTPS-Zertifikat (1 Jahr gültig, wird bei IP-Wechsel neu erzeugt) |
@@ -93,6 +94,10 @@ freigeben. WLANs mit „Client-Isolation“ (häufig Gäste-WLANs) funktionieren
 | `/hunt` | Color Hunt | auf den Handys der Gäste |
 | `/admin` | Admin-Panel | Anmeldung erforderlich |
 | `/p/:id` | Download-Seite eines Fotos | Ziel des QR-Codes an der Fotostation |
+| `/app` | Besucher-App | Tabs per `#programm`, `#challenges`, `#shop`, `#feedback`; Kurzadressen `/programm`, `/challenges`, `/shop`, `/feedback` |
+| `/c/:token` | Ziel der Challenge- und Stations-QR-Codes | schreibt gut und leitet zur Besucher-App weiter |
+| `/einloesen/:code` | Einlöse-Seite für Coupons | nur für angemeldete Admins; Ziel des Coupon-QR-Codes |
+| `/admin/print/qr/:id`, `/admin/print/station/:id`, `/admin/print/stations` | Druckansicht der QR-Codes (A4) | nur für angemeldete Admins |
 
 ## API
 
@@ -132,6 +137,21 @@ Punkte werden **auf dem Server** berechnet; das iPad bekommt die richtige Antwor
 | `POST /api/quiz/start` `{ name }` | Neue Runde mit zufälligen Fragen; liefert Sitzungs-ID und erste Frage |
 | `POST /api/quiz/answer` `{ session, answer }` | Antwort auswerten (100 Punkte + bis zu 100 Zeitbonus), nächste Frage bzw. Ergebnis mit Platz |
 
+### Besucher-App (Gäste)
+
+Gäste werden über ein HttpOnly-Cookie (`woc_visitor`, 60 Tage) wiedererkannt; das Profil wird beim ersten Aufruf angelegt.
+Ein 8-stelliger Besucher-Code erlaubt das Mitnehmen auf ein anderes Gerät.
+
+| Methode und Pfad | Zweck |
+|---|---|
+| `GET /api/v/state` | Alles für die App: Punkte, Programm, Challenges mit eigenem Fortschritt, Shop, eigene Coupons, eigenes Feedback |
+| `POST /api/v/claim` `{ token }` | Gescannten Code einlösen (aus dem Scanner in der App); Ergebnis `ok`, `already`, `inactive` oder `invalid` |
+| `POST /api/v/restore` `{ code }` | Fortschritt per Besucher-Code übernehmen (max. 10 Versuche / 10 Min) |
+| `POST /api/v/feedback` `{ rating, text }` | Feedback abgeben oder ändern (eins pro Besucher) |
+| `POST /api/v/shop/:id` | Coupon für einen Artikel holen (prüft Punkte und Bestand) |
+| `GET /api/v/coupons/:id/qr.svg` | QR-Code eines eigenen Coupons |
+| `GET /api/v/qr.svg` | QR-Code zur Besucher-App (für die Wall) |
+
 ### Admin (Anmeldung erforderlich)
 
 | Bereich | Routen |
@@ -143,6 +163,13 @@ Punkte werden **auf dem Server** berechnet; das iPad bekommt die richtige Antwor
 | Rahmen & Hintergründe | `POST /api/admin/assets/:kind`, `PATCH /api/admin/assets/:kind/:file`, `DELETE /api/admin/assets/:kind/:file` |
 | Color Hunt | `PUT /api/admin/hunt` (`active`, `countdownMinutes`, `extendMinutes`, `countdown: null`, `winnerId`, `showWinner`), `DELETE /api/admin/hunt/players/:id`, `POST /api/admin/hunt/reset` |
 | Quiz | `PUT /api/admin/quiz` (`active`, `showBoard`), `POST/PUT/DELETE /api/admin/quiz/questions[/:id]`, `DELETE /api/admin/quiz/scores/:id`, `POST /api/admin/quiz/reset` |
+| Besucher-App | `GET /api/admin/portal` (alle Daten + Auswertung), `POST /api/admin/portal/reset` (`what: progress \| feedback`) |
+| Programm | `POST /api/admin/program`, `PUT/DELETE /api/admin/program/:id`, `POST /api/admin/program/:id/move` (`dir: -1 \| 1`), `POST /api/admin/program/sort` |
+| Challenges | `POST /api/admin/challenges/qr`, `PUT/DELETE /api/admin/challenges/qr/:id`, `POST /api/admin/stations`, `PUT/DELETE /api/admin/stations/:id`, `POST /api/admin/stations/:id/move` |
+| QR-Codes | `GET /api/admin/qrcode/:kind/:id.png` (Download), `POST /api/admin/qrcode/:kind/:id/renew` (neuer Code, alter wird ungültig) |
+| Shop | `POST /api/admin/shop`, `PUT/DELETE /api/admin/shop/:id`, `PUT /api/admin/shop/:id/image` |
+| Coupons | `GET /api/admin/coupons/:code`, `POST /api/admin/coupons/:code/redeem`, `POST /api/admin/coupons/:code/cancel` |
+| Feedback | `PATCH /api/admin/feedback/:id` (`read`), `DELETE /api/admin/feedback/:id`, `GET /api/admin/feedback.csv` |
 
 ## Funktionsweise einzelner Teile
 
@@ -161,6 +188,23 @@ beim Ablauf – auch nach einem Neustart des Servers. Die persönliche Zeit jede
 Änderungen am Countdown erreichen die Gäste-Handys innerhalb von 8 Sekunden. Uploads werden noch 20 Sekunden nach
 Ablauf angenommen, damit kurz vorher gemachte Fotos nicht verloren gehen.
 
+**Challenges.** Jeder versteckte QR-Code und jede Station hat einen zufälligen 128-Bit-Schlüssel; der QR-Code enthält
+die Adresse `/c/<Schlüssel>`. Beim Scannen prüft der Server den Schlüssel und speichert die Erledigung einmalig pro
+Besucher (`portal.challenges.done`). Punkte = Summe der Erledigungen minus nicht stornierte Coupons. Der Rundgang-Bonus
+wird vergeben, sobald alle aktuellen Stationen besucht sind. Gelöschte Stationen/Challenges nehmen bereits verdiente
+Punkte nicht wieder weg.
+
+**QR-Scanner** (`qrscan.js`). Über HTTPS bzw. `localhost` mit Live-Kamera (eingebauter `BarcodeDetector` oder
+[jsQR](https://github.com/cozmo/jsQR), Apache-2.0, lokal unter `/vendor/jsQR.js`). Über HTTP – wo Browser keine
+Live-Kamera erlauben – nimmt der Gast ein Foto, das im Browser mit jsQR ausgewertet wird.
+
+**Shop und Coupons.** Ein Coupon bekommt einen 10-stelligen Code (`ABCDE-FGHIJ`, ohne verwechselbare Zeichen). Einlösen
+kann nur ein angemeldeter Admin; dabei werden Zeitpunkt und Name gespeichert, ein zweites Einlösen wird abgelehnt.
+Stornieren gibt Punkte und Bestand zurück.
+
+**Feedback.** Gespeichert werden nur Bewertung, Text, Zeit und ein Hash des Besucherprofils (damit jedes Gerät eine
+änderbare Bewertung hat) – keine Namen. Der CSV-Export schützt vor Formeln in Excel.
+
 **Fotostation.** Das Foto wird im Browser zusammengesetzt: Bei deckenden Rahmen kommt das Kamerabild in das
 Fotofenster (Position in den Einstellungen), bei transparenten Rahmen liegt der Rahmen über dem Foto. Hochgeladen wird
 das fertige JPEG. Ohne Kamera-Freigabe wird die Kamera-App des Geräts über ein Datei-Eingabefeld verwendet.
@@ -174,7 +218,7 @@ das fertige JPEG. Ohne Kamera-Freigabe wird die Kamera-App des Geräts über ein
 - **Rollen:** Nur der Global Admin darf Benutzer anlegen, löschen und Passwörter vergeben – das prüft der Server.
 - **Schutz vor fremden Seiten:** Ändernde Admin-Anfragen werden nur von derselben Herkunft (`Origin`) angenommen.
 - **Begrenzungen:** Anmeldeversuche (10 pro 10 Minuten und Gerät), Passwortänderungen, Fotos, Color-Hunt- und
-  Quiz-Anfragen sind mengenbegrenzt.
+  Quiz-Anfragen, neue Besucherprofile, Scans, Käufe, Feedback und Besucher-Code-Eingaben sind mengenbegrenzt.
 - **Uploads:** Dateityp wird geprüft (Fotos müssen echte JPEGs sein), Größen sind begrenzt, Dateinamen erzeugt der
   Server selbst. Hochgeladene Dateien werden mit einer strengen Content-Security-Policy (`sandbox`) ausgeliefert.
 - **Seiten:** Content-Security-Policy ohne fremde Skripte, `X-Frame-Options: SAMEORIGIN`, `nosniff`, kein Referrer.
@@ -187,5 +231,6 @@ Die Wall of Content ist für ein **vertrauenswürdiges lokales Netz** gedacht. N
 ## Grenzen
 
 - Quiz-Runden und Admin-Sitzungen liegen im Arbeitsspeicher; ein Neustart beendet laufende Quizrunden.
-- Ausgelegt für eine Veranstaltung mit einigen Dutzend gleichzeitigen Geräten (max. 300 Live-Verbindungen).
+- Ausgelegt für eine Veranstaltung mit einigen hundert Gästen (max. 2000 Live-Verbindungen; Besucher-Handys laden bei
+  Änderungen leicht zeitversetzt nach, damit der Laptop nicht überlastet wird).
 - Das HTTPS-Zertifikat ist selbst signiert; Browser zeigen beim ersten Aufruf der Fotostation eine Warnung.

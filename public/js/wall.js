@@ -305,6 +305,9 @@
     if (sizeChanged && !gridMode) { for (const b of bubbles.values()) b.el.remove(); bubbles.clear(); }
     renderHunt(state.hunt || {});
     renderBoard((state.quiz || {}).board);
+    const portal = $('#portalQr');
+    if (settings.portalQr && portal.hidden) $('img', portal).src = '/api/v/qr.svg?t=' + Date.now();
+    portal.hidden = !settings.portalQr;
   }
 
   /* ---------------- Anzeige eines Inhalts (nur nach Klick) ---------------- */

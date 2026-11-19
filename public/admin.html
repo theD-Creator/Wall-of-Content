@@ -26,6 +26,10 @@
         <button data-tab="photos">Fotos <span id="pendingBadge" class="badge" hidden></span></button>
         <button data-tab="hunt">Color Hunt <span id="huntBadge" class="badge" hidden></span></button>
         <button data-tab="quiz">Quiz</button>
+        <button data-tab="program">Programm</button>
+        <button data-tab="challenges">Challenges</button>
+        <button data-tab="shop">Shop <span id="shopBadge" class="badge" hidden></span></button>
+        <button data-tab="feedback">Feedback <span id="fbBadge" class="badge" hidden></span></button>
         <button data-tab="frames">Rahmen</button>
         <button data-tab="backgrounds">Hintergründe</button>
         <button data-tab="users">Benutzer</button>
@@ -155,6 +159,155 @@
         </form>
       </section>
 
+      <!-- ===================== Programm ===================== -->
+      <section data-panel="program" class="panel">
+        <div class="grid2">
+          <form id="progForm" class="card">
+            <h2 id="progFormTitle">Neuer Programmpunkt</h2>
+            <input name="title" maxlength="80" placeholder="Titel, z. B. Live-Graffiti mit …" required>
+            <textarea name="description" maxlength="300" rows="2" placeholder="Kurze Beschreibung (optional)"></textarea>
+            <div class="time-row">
+              <label>Datum<input name="date" type="date" required></label>
+              <label>Beginn<input name="start" type="time" required></label>
+              <label>Ende<input name="end" type="time" required></label>
+            </div>
+            <label class="switch"><input name="highlight" type="checkbox"><span></span> ★ Als Highlight hervorheben</label>
+            <div class="row"><button class="btn primary">Speichern</button><button type="button" id="progCancel" class="btn ghost" hidden>Abbrechen</button></div>
+            <p class="muted small">Endet ein Programmpunkt nach Mitternacht, einfach die Endzeit eintragen – er geht dann bis zum nächsten Tag.</p>
+          </form>
+          <div class="card">
+            <h2>Besucher-App</h2>
+            <p class="muted small">Gäste öffnen die Besucher-App mit dem eigenen Handy. Dort sehen sie das Programm, sammeln Punkte bei den Challenges, holen sich Merch-Coupons und geben Feedback.</p>
+            <div id="portalUrl" class="urls"></div>
+            <label class="switch"><input id="portalQr" type="checkbox"><span></span> QR-Code zur Besucher-App auf der Wall zeigen</label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row wrap"><h2 style="flex:1">Ablauf</h2><button id="progSort" class="btn small">Nach Uhrzeit sortieren</button></div>
+          <p class="muted small">Mit ▲ ▼ legst du die Reihenfolge in der Besucher-App fest. Änderungen erscheinen sofort auf allen Handys.</p>
+          <ol id="progList" class="admin-prog"></ol>
+        </div>
+      </section>
+
+      <!-- ===================== Challenges ===================== -->
+      <section data-panel="challenges" class="panel">
+        <div class="cards" id="chStats"></div>
+        <div class="grid2">
+          <div class="card">
+            <h2>🔍 QR-Code-Challenge</h2>
+            <p class="muted small">Druck den QR-Code aus und versteck ihn auf dem Gelände. Wer ihn findet und scannt, bekommt die Punkte – jede Person nur einmal.
+              Jeder Code ist einzigartig und nicht erratbar; „Neuer Code“ macht einen alten Ausdruck ungültig.</p>
+            <div id="qrChallenges" class="code-list"></div>
+            <form id="qrForm" class="sub-form">
+              <b id="qrFormTitle">Neue QR-Code-Challenge</b>
+              <input name="title" maxlength="100" placeholder="Aufgabe" value="Finde den versteckten QR-Code auf dem Gelände!" required>
+              <input name="hint" maxlength="200" placeholder="Tipp für die Suche (optional), z. B. „In der Nähe der Bühne“">
+              <div class="row"><label class="mins">Punkte <input name="points" type="number" min="0" max="10000" value="50" required></label>
+                <button class="btn primary small">Speichern</button><button type="button" id="qrCancel" class="btn ghost small" hidden>Abbrechen</button></div>
+            </form>
+          </div>
+          <div class="card">
+            <h2>🗺️ Digitaler Rundgang – Stationen</h2>
+            <p class="muted small">Jede Station bekommt einen eigenen QR-Code. Den zeigt der Coach an der Station (ausgedruckt oder auf dem Handy).
+              Wer scannt, bekommt den Stempel und Punkte.</p>
+            <div class="row wrap">
+              <label class="mins">Punkte pro Station <input id="stationPoints" type="number" min="0" max="10000"></label>
+              <label class="mins">Bonus für alle Stationen <input id="tourBonus" type="number" min="0" max="100000"></label>
+              <button id="pointsSave" class="btn small">Punkte speichern</button>
+            </div>
+            <div id="stationList" class="code-list"></div>
+            <form id="stationForm" class="sub-form">
+              <b id="stationFormTitle">Neue Station</b>
+              <input name="name" maxlength="60" placeholder="Name, z. B. Graffiti-AG" required>
+              <input name="description" maxlength="240" placeholder="Kurze Beschreibung">
+              <div class="row"><button class="btn primary small">Speichern</button><button type="button" id="stationCancel" class="btn ghost small" hidden>Abbrechen</button>
+                <a class="btn small" href="/admin/print/stations" target="_blank" rel="noopener">🖨️ Alle Stations-Codes drucken</a></div>
+            </form>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="card"><h2>Besuche pro Station</h2><div id="chartStations" class="hbars"></div></div>
+          <div class="card"><h2>Fortschritt der Besucher</h2><p class="muted small">Wie viele Besucher wie viele Stationen geschafft haben.</p><div id="chartProgress" class="hbars"></div></div>
+        </div>
+        <div class="card danger-zone">
+          <h2>Zurücksetzen</h2>
+          <p class="muted small">Nach dem Testen vor der Veranstaltung: löscht alle Besucherprofile, Punkte, Stempel und Coupons. Stationen, Challenges und Shop-Artikel bleiben.</p>
+          <div><button id="progressReset" class="btn danger">Fortschritt aller Besucher löschen</button></div>
+        </div>
+      </section>
+
+      <!-- ===================== Shop ===================== -->
+      <section data-panel="shop" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>🎟️ Coupon prüfen &amp; einlösen</h2>
+            <form id="couponForm" class="row wrap">
+              <input id="couponCode" maxlength="13" placeholder="Code, z. B. ABCDE-FGHIJ" autocomplete="off" autocapitalize="characters" style="flex:1;min-width:12rem">
+              <button class="btn primary">Prüfen</button>
+              <button type="button" id="couponScan" class="btn">📷 Scannen</button>
+            </form>
+            <div id="couponResult"></div>
+            <p class="muted small">Tipp: Scannt ihr den Coupon-QR-Code mit der Kamera-App eines Handys, auf dem ihr im Admin-Panel angemeldet seid, öffnet sich direkt die Einlöse-Seite.</p>
+          </div>
+          <form id="itemForm" class="card">
+            <h2 id="itemFormTitle">Neuer Artikel</h2>
+            <input name="name" maxlength="60" placeholder="Name, z. B. Tecspaze-Sticker" required>
+            <input name="description" maxlength="200" placeholder="Kurze Beschreibung (optional)">
+            <div class="row wrap">
+              <label class="mins">Preis (Punkte) <input name="price" type="number" min="1" max="100000" required></label>
+              <label class="mins">Bestand <input name="stock" type="number" min="0" max="100000" placeholder="∞"></label>
+            </div>
+            <label class="switch"><input name="active" type="checkbox" checked><span></span> Im Shop sichtbar</label>
+            <label class="btn small" style="align-self:flex-start">🖼️ Bild auswählen (optional)<input name="image" type="file" accept="image/jpeg,image/png,image/webp" hidden></label>
+            <div class="row"><button class="btn primary">Speichern</button><button type="button" id="itemCancel" class="btn ghost" hidden>Abbrechen</button></div>
+            <p class="muted small">Bestand leer lassen = unbegrenzt.</p>
+          </form>
+        </div>
+        <div id="shopItemsAdmin" class="item-grid"></div>
+        <div class="card">
+          <div class="row wrap"><h2 style="flex:1">Ausgegebene Coupons</h2>
+            <div class="row wrap filter" id="couponFilter">
+              <button class="chip active" data-filter="all">Alle</button>
+              <button class="chip" data-filter="open">Offen</button>
+              <button class="chip" data-filter="used">Eingelöst</button>
+            </div></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Code</th><th>Artikel</th><th>Punkte</th><th>Geholt</th><th>Status</th><th></th></tr></thead>
+            <tbody id="couponRows"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- ===================== Feedback ===================== -->
+      <section data-panel="feedback" class="panel">
+        <div class="grid2">
+          <div class="card fb-summary">
+            <h2>Durchschnittliche Bewertung</h2>
+            <div class="fb-hero"><span id="fbAvgIcon" class="fb-hero-icon"></span><div><b id="fbAvg">–</b><span id="fbCount" class="muted"></span></div></div>
+          </div>
+          <div class="card">
+            <h2>Verteilung der Bewertungen</h2>
+            <div id="chartRatings" class="hbars ratings"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row wrap fb-tools">
+            <label class="mins">Sortierung
+              <select id="fbSort"><option value="new">Neueste zuerst</option><option value="old">Älteste zuerst</option><option value="best">Beste zuerst</option><option value="worst">Schlechteste zuerst</option></select>
+            </label>
+            <div class="row wrap filter" id="fbFilter">
+              <button class="chip active" data-rating="0">Alle</button>
+              <button class="chip" data-rating="5">😍</button><button class="chip" data-rating="4">🙂</button><button class="chip" data-rating="3">😐</button>
+              <button class="chip" data-rating="2">🙁</button><button class="chip" data-rating="1">😖</button>
+            </div>
+            <label class="switch"><input id="fbTextOnly" type="checkbox"><span></span> Nur mit Text</label>
+            <label class="switch"><input id="fbUnread" type="checkbox"><span></span> Nur ungelesene</label>
+            <span style="flex:1"></span>
+            <a class="btn small" href="/api/admin/feedback.csv">⬇️ Als CSV (Excel)</a>
+            <button id="fbReset" class="btn small danger">Alle löschen</button>
+          </div>
+          <div id="fbList" class="fb-list"></div>
+        </div>
+      </section>
+
       <section data-panel="frames" class="panel">
         <div class="card">
           <p>Rahmen für die Fotostation, am besten im Hochformat 1080 × 1920 px. <b>Deckende Bilder</b> (JPG/PNG) sind Hintergründe – das Foto wird in das Fotofenster in der Mitte gesetzt. <b>Bilder mit Transparenz</b> (PNG/WebP/SVG) werden über das Foto gelegt. Hochladen oder direkt in den Ordner <code>assets/frames</code> legen.</p>
@@ -236,6 +389,8 @@
   </div>
   <div id="toast" class="toast" hidden></div>
   <script src="/js/common.js"></script>
+  <script src="/js/qrscan.js"></script>
   <script src="/js/admin.js"></script>
+  <script src="/js/admin-portal.js"></script>
 </body>
 </html>
