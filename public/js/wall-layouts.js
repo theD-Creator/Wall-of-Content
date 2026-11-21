@@ -18,7 +18,8 @@
   const twice = (fn) => requestAnimationFrame(() => requestAnimationFrame(fn));
 
   /** Bild oder Video für eine Kachel/Bühne. */
-  function media(item, { full = false, play = false } = {}) {
+  function media(item, { full = false, play = false, preview = false } = {}) {
+    if (item.kind === 'video' && preview) return VideoPreview.make(item); // bewegte Vorschau (Leiste, Mosaik)
     if (item.kind === 'video' && play) {
       const v = el('video', { src: item.url, playsInline: true, autoplay: true, poster: item.thumb || '', preload: 'auto' });
       v.muted = true;
@@ -69,10 +70,27 @@
   }
 
   /* ---------------- Programm-Band: „Jetzt live“ / „Gleich“ ---------------- */
-  function renderBand(box, program, now) {
+  /** Moment gilt als „LIVE“, solange er jünger ist als die eingestellte Zeit. */
+  const isLive = (it, s, now) => !!(it && it.moment && now - it.moment.at < (s.momentHighlightMin || 15) * 60_000);
+  /** Darf ein neuer Inhalt sofort auf die Bühne springen? Moments nur, wenn „Sofort groß“ an ist. */
+  const jumps = (it, s) => !it.moment || s.momentInstant !== false;
+
+  /** Live-Ticker: die neuesten Moments wechseln sich im Band ab (alle 8 s). */
+  function tickerItem(items, s, now) {
+    if (!s.momentTicker) return null;
+    const list = items.filter((i) => i.moment).sort((a, b) => b.moment.at - a.moment.at).slice(0, 5);
+    if (!list.length) return null;
+    const m = list[Math.floor(now / 8000) % list.length];
+    return el('div', { class: 'band-item ticker' },
+      el('span', { class: 'pill ' + (isLive(m, s, now) ? 'pill-live' : 'pill-moment'), text: isLive(m, s, now) ? '● Live Moment' : '📍 Moment' }),
+      el('b', { text: m.moment.caption || 'Neuer Moment von ' + m.moment.by }),
+      m.moment.tags.length && el('span', { class: 'band-time', text: m.moment.tags.slice(0, 3).join(' ') }));
+  }
+
+  function renderBand(box, program, now, ticker) {
     const live = program.filter((p) => p.start <= now && now < p.end);
     const next = program.filter((p) => p.start > now).sort((a, b) => a.start - b.start)[0];
-    const parts = live.slice(0, 2).map((p) => el('div', { class: 'band-item live' },
+    const parts = live.slice(0, ticker ? 1 : 2).map((p) => el('div', { class: 'band-item live' },
       el('span', { class: 'pill pill-live', text: '● Jetzt live' }),
       el('b', { text: p.title }),
       el('span', { class: 'band-time', text: `bis ${hm(p.end)} Uhr` })));
@@ -81,12 +99,71 @@
         el('span', { class: 'pill pill-next', text: `Gleich · ${hm(next.start)}` }),
         el('b', { text: next.title })));
     }
+    if (ticker) parts.unshift(ticker);
     if (!parts.length) {
       parts.push(el('div', { class: 'band-item' },
         el('span', { class: 'pill pill-next', text: 'Mach mit' }),
         el('b', { text: 'Fotostation · Color Hunt · Challenges' })));
     }
     box.replaceChildren(...parts);
+  }
+
+  /* ======================= „Alle Inhalte“ zum Stöbern ======================= */
+  /**
+   * Großes Raster über der Wall: Besucher filtern nach Fotos, Videos, Moments und Hashtags und tippen an.
+   * Schließt sich nach 45 s ohne Berührung von selbst. Liegt unter dem Viewer, damit man danach weiterstöbern kann.
+   */
+  function openBrowser(items, ctx, onClose) {
+    let filter = 'alle';
+    const tags = [...new Set(items.flatMap((i) => (i.moment ? i.moment.tags : [])))].slice(0, 12);
+    const grid = el('div', { class: 'wb-grid' });
+    const chips = el('div', { class: 'wb-chips' });
+    const close = () => { clearTimeout(idle); box.classList.remove('open'); setTimeout(() => { release(box); box.remove(); }, 350); onClose && onClose(); };
+    const box = el('div', { class: 'wall-browse', role: 'dialog', 'aria-label': 'Alle Inhalte' },
+      el('header', { class: 'wb-head' },
+        el('div', {}, el('small', { class: 'lb-kicker', text: 'Selbst stöbern' }), el('h2', { text: 'Alle Inhalte' })),
+        el('button', { class: 'wb-close', type: 'button', 'aria-label': 'Schließen', text: '✕', onclick: close })),
+      chips, el('div', { class: 'wb-scroll' }, grid));
+    const has = (k) => items.some((i) => (k === 'moment' ? i.moment : k === 'image' ? i.kind === 'image' && !i.moment : i.kind === k));
+    const FILTERS = [['alle', 'Alle'], ['photo', '📸 Fotostation'], ['image', '🖼️ Bilder'], ['video', '🎬 Videos'], ['moment', '📍 Moments']]
+      .filter(([k]) => k === 'alle' || has(k));
+    function render() {
+      chips.replaceChildren(...FILTERS.map(([k, t]) => el('button', { type: 'button', class: 'pill' + (filter === k ? ' on' : ''), text: t, onclick: () => { filter = k; render(); } })),
+        ...tags.map((t) => el('button', { type: 'button', class: 'pill pill-tag' + (filter === t ? ' on' : ''), text: t, onclick: () => { filter = t; render(); } })));
+      const list = [...items].sort((a, b) => b.createdAt - a.createdAt).filter((i) => filter === 'alle' ? true
+        : filter.startsWith('#') ? i.moment && i.moment.tags.includes(filter)
+          : filter === 'moment' ? !!i.moment : filter === 'image' ? i.kind === 'image' && !i.moment : i.kind === filter);
+      release(grid);
+      grid.replaceChildren(...list.map((it) => el('button', {
+        type: 'button', class: 'wb-tile', 'aria-label': it.title || 'Inhalt öffnen', onclick: () => ctx.open(it),
+      }, it.kind === 'video' ? media(it, { preview: true }) : el('img', { src: it.thumb || it.url, alt: '', loading: 'lazy', decoding: 'async' }),
+      it.kind === 'video' && el('span', { class: 'lm-play', text: '▶' }),
+      (it.title || it.moment) && el('span', { class: 'wb-cap', text: (it.moment ? '📍 ' : '') + ((it.moment && it.moment.caption) || it.title || '') }))));
+      grid.parentNode && (grid.parentNode.scrollTop = 0);
+    }
+    let idle = null;
+    const poke = () => { clearTimeout(idle); idle = setTimeout(() => { if (!document.querySelector('#viewer.open')) close(); else poke(); }, 45_000); };
+    box.addEventListener('pointerdown', poke);
+    box.addEventListener('scroll', poke, { passive: true, capture: true });
+    render();
+    document.body.append(box);
+    twice(() => box.classList.add('open'));
+    poke();
+    return close;
+  }
+  /** Knopf „Alle Inhalte“ für die Kopfzeile. */
+  function browseButton(getItems, ctx, layout) {
+    let closeFn = null;
+    const b = el('button', {
+      class: 'lb-browse', type: 'button', text: '▦ Alle Inhalte',
+      onclick: () => {
+        if (closeFn) return;
+        layout.pause(true);
+        closeFn = openBrowser(getItems(), ctx, () => { closeFn = null; layout.pause(false); });
+      },
+    });
+    b.closeBrowser = () => closeFn && closeFn();
+    return b;
   }
 
   /* ======================= Bühne ======================= */
@@ -100,10 +177,12 @@
       el('div', { class: 'lb-progress' }, bar));
     const railList = el('div', { class: 'lb-rail-list' });
     const bandItems = el('div', { class: 'band-items' });
+    const api = {};
+    const browse = browseButton(() => items, ctx, api);
     const root = el('div', { class: 'L-buehne' },
       el('header', { class: 'lb-head' },
         el('div', { class: 'lb-titles' }, el('small', { class: 'lb-kicker', text: 'Wall of Content' }), title, sub),
-        el('div', { class: 'lb-head-right' }, logo, clock)),
+        el('div', { class: 'lb-head-right' }, browse, logo, clock)),
       stage,
       el('aside', { class: 'lb-rail' }, el('h2', {}, el('span', { class: 'pill pill-new', text: 'Neu' }), 'Neueste Inhalte'), railList),
       el('footer', { class: 'lb-band' }, bandItems));
@@ -136,17 +215,28 @@
     addEventListener('resize', orient);
     orient();
 
+    /**
+     * Reihenfolge der Bühne: „playlist“ = nur angepinnte in fester Reihenfolge (ohne Playlist: alle),
+     * sonst alle zufällig, angepinnte doppelt. Für die Bühne ausgeblendete Inhalte kommen nicht dran.
+     */
+    function buildQueue() {
+      const ok = items.filter((i) => !i.stageHide);
+      const pinned = ok.filter((i) => i.pin).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      if (settings.stageMode === 'playlist' && pinned.length) return pinned.map((i) => i.id);
+      return shuffle([...ok, ...pinned].map((i) => i.id));
+    }
     function nextItem() {
       if (!items.length) return null;
-      const byId = new Map(items.map((i) => [i.id, i]));
+      const byId = new Map(items.filter((i) => !i.stageHide).map((i) => [i.id, i]));
+      if (!byId.size) return items[0];
       for (let guard = 0; guard < 2; guard++) {
-        if (!queue.length) queue = shuffle(items.map((i) => i.id));
+        if (!queue.length) queue = buildQueue();
         while (queue.length) {
           const id = queue.shift();
           if (byId.has(id) && (items.length === 1 || !cur || id !== cur.id)) return byId.get(id);
         }
       }
-      return items[0];
+      return byId.values().next().value;
     }
     function restart(secs) {
       clearTimeout(timer);
@@ -168,7 +258,7 @@
       const next = el('div', { class: 'lb-slide' },
         blurSrc && el('div', { class: 'lb-blur', style: `background-image:${cssUrl(blurSrc)}` }),
         m,
-        el('div', { class: 'lb-caption' },
+        item.moment ? momentCaption(item) : el('div', { class: 'lb-caption' },
           el('span', { class: 'pill pill-kind', text: KIND[item.kind] || 'Inhalt' }),
           fresh && el('span', { class: 'pill pill-new', text: 'Neu' }),
           item.title && el('b', { text: item.title }),
@@ -191,6 +281,18 @@
       }
       restart(secs);
     }
+    /** Bildunterschrift für Moments: LIVE-Badge, Text, Hashtags, wer es gepostet hat. */
+    function momentCaption(item) {
+      const m = item.moment;
+      const live = isLive(item, settings, ctx.now());
+      return el('div', { class: 'lb-caption lb-moment' },
+        el('div', { class: 'lb-moment-top' },
+          el('span', { class: 'pill ' + (live ? 'pill-live' : 'pill-moment'), text: live ? '● Live Moment' : '📍 Moment' }),
+          el('span', { class: 'lb-by' }, m.avatar ? el('img', { src: m.avatar, alt: '' }) : null, 'von ' + m.by),
+          el('span', { class: 'lb-ago', text: ago(m.at, ctx.now()) })),
+        m.caption && el('b', { text: m.caption }),
+        m.tags.length && el('div', { class: 'lb-tags' }, ...m.tags.map((t) => el('span', { text: t }))));
+    }
     function advance() { show(nextItem(), false); }
     stage.addEventListener('click', () => { if (cur) ctx.open(cur); });
 
@@ -200,25 +302,37 @@
       railList.replaceChildren(...latest.map((it) => el('button', {
         class: 'lb-card' + (fresh.includes(it.id) ? ' fresh' : ''), type: 'button',
         'aria-label': it.title || 'Inhalt öffnen', onclick: () => ctx.open(it),
-      }, media(it), el('span', { class: 'lb-card-meta' },
-        el('b', { text: it.title || KIND[it.kind] || 'Inhalt' }),
+      }, media(it, { preview: true }), el('span', { class: 'lb-card-meta' },
+        el('b', { text: (it.moment ? '📍 ' : '') + ((it.moment && it.moment.caption) || it.title || KIND[it.kind] || 'Inhalt') }),
         el('small', { text: ago(it.createdAt, ctx.now()) })))));
       fitRail();
     }
-    const tickClock = () => { clock.textContent = hm(ctx.now()); renderBand(bandItems, program, ctx.now()); };
-    const clockTimer = setInterval(tickClock, 10_000);
+    const tickClock = () => { clock.textContent = hm(ctx.now()); renderBand(bandItems, program, ctx.now(), tickerItem(items, settings, ctx.now())); };
+    const clockTimer = setInterval(tickClock, 8_000);
 
-    return {
+    Object.assign(api, {
       update(list, { fresh = [] } = {}) {
+        const prev = items;
         items = list;
         renderRail(fresh);
         const byId = new Map(items.map((i) => [i.id, i]));
-        const newest = fresh.filter((id) => byId.has(id)).pop();
-        if (newest) show(byId.get(newest), true);           // neues Foto sofort auf die Bühne
-        else if (!cur || !byId.has(cur.id)) show(nextItem(), false);
+        // Playlist geändert (Anpinnen, Reihenfolge, Ausblenden)? Dann Reihenfolge neu aufbauen
+        const sig = (l) => l.map((i) => `${i.id}:${i.pin ? i.order : ''}:${i.stageHide ? 1 : 0}`).join();
+        if (sig(prev) !== sig(list)) queue = [];
+        const newest = fresh.filter((id) => byId.has(id) && jumps(byId.get(id), settings)).pop();
+        if (newest) show(byId.get(newest), true);           // neues Foto / neuer Moment sofort auf die Bühne
+        else if (!cur || !byId.has(cur.id) || (byId.get(cur.id).stageHide && items.some((i) => !i.stageHide))) show(nextItem(), false);
+        tickClock();
       },
+      /** „Jetzt auf die Bühne“ aus dem Admin-Panel */
+      feature(item) { browse.closeBrowser(); show(item, false); },
       settings(s, prog, logoUrl) {
+        const modeChanged = settings.stageMode !== undefined && s.stageMode !== settings.stageMode;
+        if (s.stageMode !== settings.stageMode) queue = [];
         settings = s;
+        // auf „Nur die Playlist“ umgestellt: sofort zur Playlist wechseln, wenn gerade etwas anderes läuft
+        if (modeChanged && s.stageMode === 'playlist' && cur && !cur.pin && items.some((i) => i.pin && !i.stageHide)) setTimeout(advance);
+        browse.hidden = s.browseButton === false;
         program = prog || [];
         title.textContent = s.title || '';
         sub.textContent = s.subtitle || '';
@@ -236,9 +350,11 @@
       destroy() {
         clearTimeout(timer); clearInterval(clockTimer); qr.stop(); railRo.disconnect();
         removeEventListener('resize', orient);
+        browse.closeBrowser();
         release(root); root.remove();
       },
-    };
+    });
+    return api;
   }
 
   /* ======================= Mosaik ======================= */
@@ -248,10 +364,13 @@
     const clock = el('div', { class: 'lb-clock' });
     const logo = el('img', { class: 'lb-logo', alt: '', hidden: true });
     const bandItems = el('div', { class: 'band-items' });
+    const api = {};
+    const browse = browseButton(() => items, ctx, api);
+    let settings = {};
     const root = el('div', { class: 'L-mosaik' },
       el('header', { class: 'lm-head' },
         el('div', { class: 'lm-title' }, el('small', { class: 'lb-kicker', text: 'Wall of Content' }), title),
-        el('div', { class: 'lb-head-right' }, logo, clock)),
+        el('div', { class: 'lb-head-right' }, browse, logo, clock)),
       el('div', { class: 'lm-area' }, grid),
       el('footer', { class: 'lb-band lm-band' }, bandItems));
     host.append(root);
@@ -306,7 +425,7 @@
 
     function fill(tile, item, fresh) {
       // große Kacheln bekommen das Originalbild, damit nichts unscharf hochskaliert wird
-      const m = media(item, { full: tile.classList.contains('big') || !item.thumb });
+      const m = media(item, { full: tile.classList.contains('big') || !item.thumb, preview: true });
       const blurSrc = item.thumb || (item.kind === 'video' ? '' : item.url);
       const blur = blurSrc ? el('div', { class: 'lm-blur', style: `background-image:${cssUrl(blurSrc)}` }) : null;
       const layer = el('div', { class: 'lm-layer' }, blur, m,
@@ -374,17 +493,26 @@
     const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(() => { const [c, r] = dims(); if (c !== cols || r !== rows) build(); }, 300); };
     const areaRo = new ResizeObserver(onResize);
     areaRo.observe(grid);
-    const tickClock = () => { clock.textContent = hm(ctx.now()); renderBand(bandItems, program, ctx.now()); };
-    const bandTimer = setInterval(tickClock, 10_000);
+    const tickClock = () => { clock.textContent = hm(ctx.now()); renderBand(bandItems, program, ctx.now(), tickerItem(items, settings, ctx.now())); };
+    const bandTimer = setInterval(tickClock, 8_000);
+    const highlight = (item, isNew) => {
+      const tile = tiles[0];
+      if (!tile) return;
+      fill(tile, item, isNew);
+      tile.classList.remove('flash');
+      void tile.offsetWidth;
+      tile.classList.add('flash');
+    };
 
-    return {
+    Object.assign(api, {
+      feature(item) { browse.closeBrowser(); highlight(item, false); },
       update(list, { fresh = [] } = {}) {
         const first = !items.length;
         items = list;
         if (first || !tiles.length) { build(); }
         const byId = new Map(items.map((i) => [i.id, i]));
         for (const t of tiles) if (t._item && !byId.has(t._item.id)) fill(t, order(1)[0] || t._item, false);
-        fresh.filter((id) => byId.has(id)).forEach((id, n) => {
+        fresh.filter((id) => byId.has(id) && jumps(byId.get(id), settings)).forEach((id, n) => {
           const tile = tiles[n % Math.max(1, tiles.length)]; // neue Fotos in die großen Kacheln
           if (!tile) return;
           fill(tile, byId.get(id), true);
@@ -393,8 +521,11 @@
           tile.classList.add('flash');
         });
         if (!items.length) { release(grid); grid.replaceChildren(); tiles = []; }
+        tickClock();
       },
       settings(s, prog, logoUrl) {
+        settings = s;
+        browse.hidden = s.browseButton === false;
         program = prog || [];
         title.textContent = s.title || '';
         logo.hidden = !logoUrl;
@@ -406,9 +537,11 @@
       destroy() {
         clearInterval(swapTimer); clearInterval(retile); clearInterval(bandTimer);
         areaRo.disconnect(); qr.stop(); clearTimeout(resizeT);
+        browse.closeBrowser();
         release(root); root.remove();
       },
-    };
+    });
+    return api;
   }
 
   /* ======================= Wechsel: Bühne ⇄ Mosaik ======================= */
@@ -442,6 +575,7 @@
     mount();
     return {
       update(list, opts) { items = list; inner.update(list, opts); },
+      feature(item) { inner.feature(item); },
       settings(s, prog, logoUrl) {
         const changed = (args[0].layoutMinutes || 4) !== (s.layoutMinutes || 4);
         args = [s, prog, logoUrl];

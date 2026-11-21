@@ -9,6 +9,9 @@
  *  /quiz     Quiz (iPad); zeigt die Wall, solange kein Quiz läuft
  *  /app      Besucher-App: Live-Programm, Challenges, Merch-Shop, Feedback (lib/portal.js)
  */
+// Läuft als kleiner Wächter, der den eigentlichen Server bei Bedarf neu startet (lib/supervisor.js)
+if (require('./lib/supervisor')(__filename)) return;
+
 const express = require('express');
 const http = require('http');
 const https = require('https');
@@ -24,17 +27,29 @@ const QRCode = require('qrcode');
 const ROOT = __dirname;
 const PORT = Number(process.env.PORT) || 3000;
 const HTTPS_PORT = process.env.HTTPS_PORT === '0' ? 0 : Number(process.env.HTTPS_PORT) || 3443;
-const DATA = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
+// Daten liegen außerhalb des Programmordners (~/Wall of Content Daten), damit Updates nichts verlieren.
+// Beim ersten Start werden alte Daten automatisch übernommen (lib/datadir.js).
+const DATA_INFO = require('./lib/datadir').resolveDataDir(ROOT);
+const DATA = DATA_INFO.dir;
+fs.mkdirSync(DATA, { recursive: true });
+const RESTORED = require('./lib/backup').applyPending(DATA); // wartende Sicherung/Übernahme einspielen
 const UPLOADS = path.join(DATA, 'uploads');
-const ASSETS = path.resolve(process.env.ASSETS_DIR || path.join(ROOT, 'assets'));
-const ASSET_DIRS = { frames: path.join(ASSETS, 'frames'), backgrounds: path.join(ASSETS, 'backgrounds') };
-const MEDIA_DIR = path.join(ASSETS, 'media'); // Bilder/Videos hier erscheinen automatisch auf der Wall
+const ASSETS = path.resolve(process.env.ASSETS_DIR || path.join(ROOT, 'assets')); // mitgelieferte Dateien
+const USER_ASSETS = path.join(DATA, 'assets'); // eigene Rahmen, Hintergründe, Logo, Profilbilder, Medien
+const ASSET_DIRS = { frames: path.join(USER_ASSETS, 'frames'), backgrounds: path.join(USER_ASSETS, 'backgrounds') };
+const BUILTIN_DIRS = { frames: path.join(ASSETS, 'frames'), backgrounds: path.join(ASSETS, 'backgrounds') };
+const MEDIA_DIR = path.join(USER_ASSETS, 'media'); // Bilder/Videos hier erscheinen automatisch auf der Wall
+const MEDIA_DIRS = [MEDIA_DIR, path.join(ASSETS, 'media')]; // … ebenso im Programmordner (wie bisher)
 const DB_FILE = path.join(DATA, 'db.json');
 
-const MAX_PHOTO = 12 * 1024 * 1024;
-const MAX_MEDIA = Number(process.env.MAX_UPLOAD_MB || 1024) * 1024 * 1024;
-const MAX_ASSET = 25 * 1024 * 1024;
-const AVATARS = path.join(ASSETS, 'avatars');
+// Keine festen Größengrenzen mehr: es zählt nur der freie Speicherplatz. Wer doch eine Grenze will,
+// setzt MAX_UPLOAD_MB. Dateien, die komplett im Arbeitsspeicher landen (Fotos, Profil-/Shop-Bilder), sind
+// großzügig auf 512 MB begrenzt, damit ein kaputter Upload den Server nicht lahmlegt.
+const MAX_MEDIA = process.env.MAX_UPLOAD_MB ? Number(process.env.MAX_UPLOAD_MB) * 1024 * 1024 : Infinity;
+const MAX_ASSET = MAX_MEDIA;
+const MAX_PHOTO = '512mb';
+const MAX_MEMORY = '512mb';
+const AVATARS = path.join(USER_ASSETS, 'avatars');
 
 const MEDIA_TYPES = {
   'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif',
@@ -49,7 +64,9 @@ const ASSET_EXT = {
   backgrounds: ['.png', '.webp', '.svg', '.jpg', '.jpeg', '.mp4', '.webm'],
 };
 
-for (const d of [DATA, UPLOADS, MEDIA_DIR, AVATARS, ...Object.values(ASSET_DIRS)]) fs.mkdirSync(d, { recursive: true });
+for (const d of [DATA, UPLOADS, MEDIA_DIR, AVATARS, ...Object.values(ASSET_DIRS), path.join(ASSETS, 'media')]) {
+  try { fs.mkdirSync(d, { recursive: true }); } catch { /* Programmordner schreibgeschützt – egal */ }
+}
 
 /* ------------------------------------------------------------------ */
 /* Einstellungen & Datenbank (JSON-Datei)                              */
@@ -105,6 +122,15 @@ const SETTINGS = {
   wallLayout: { type: 'enum', values: ['buehne', 'mosaik', 'wechsel'], def: 'buehne' },
   stageSeconds: { type: 'int', min: 4, max: 60, def: 9 },
   layoutMinutes: { type: 'int', min: 1, max: 60, def: 4 },
+  // Bühne: „alle“ = alle Inhalte zufällig (angepinnte öfter), „playlist“ = nur angepinnte in fester Reihenfolge
+  stageMode: { type: 'enum', values: ['alle', 'playlist'], def: 'alle' },
+  browseButton: { type: 'bool', def: true }, // Knopf „Alle Inhalte“ auf der Wall
+  // Live-Modus (Moments der Redaktion)
+  momentInstant: { type: 'bool', def: true },   // neuer Moment sofort groß auf die Bühne
+  momentApproval: { type: 'bool', def: false }, // erst nach Freigabe im Admin auf die Wall
+  momentTicker: { type: 'bool', def: true },    // Moments als Live-Ticker im Band
+  momentHighlightMin: { type: 'int', min: 1, max: 240, def: 15 }, // so lange gilt ein Moment als „LIVE“
+  momentTags: { type: 'string', max: 400, def: '#UrbanArtNight #tecspaze #Backstage #Live #Graffiti' },
 };
 const newId = () => crypto.randomBytes(9).toString('base64url');
 let settingsVersion = Date.now(); // ändert sich bei jeder Einstellungsänderung (Wall holt dann z. B. QR-Codes neu)
@@ -187,6 +213,20 @@ function save() {
   }, 150);
 }
 
+/** Sofort speichern und warten (vor Sicherung/Neustart). */
+async function flush() {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    const json = JSON.stringify(db, null, 2);
+    saving = saving.then(async () => {
+      await fsp.writeFile(DB_FILE + '.tmp', json);
+      await fsp.rename(DB_FILE + '.tmp', DB_FILE);
+    });
+  }
+  await saving.catch(() => {});
+}
+
 const clean = (v, max = 60) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max) : '');
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -255,7 +295,15 @@ function currentUser(req) {
   if (sess.exp < Date.now()) { sessions.delete(token); return null; }
   return db.users.find((u) => u.id === sess.userId) || null;
 }
-const isAdmin = (req) => !!currentUser(req);
+// Die Rolle „redaktion“ darf nur Moments posten (Live-Kamera), nicht ins Admin-Panel.
+const isAdmin = (req) => { const u = currentUser(req); return !!u && u.role !== 'redaktion'; };
+function requireEditor(req, res, next) {
+  const u = currentUser(req);
+  if (!u) return res.status(401).json({ error: 'Nicht angemeldet' });
+  if (req.method !== 'GET' && !sameOrigin(req)) return res.status(403).json({ error: 'Ungültige Herkunft' });
+  req.user = u;
+  next();
+}
 const publicUser = (u) => ({
   id: u.id, name: u.name, role: u.role, hasPassword: !!u.pass,
   avatar: u.avatar ? `/assets/avatars/${encodeURIComponent(u.avatar)}` : null,
@@ -266,7 +314,7 @@ function sameOrigin(req) {
   try { return new URL(origin).host === req.headers.host; } catch { return false; }
 }
 function requireAdmin(req, res, next) {
-  if (!isAdmin(req)) return res.status(401).json({ error: 'Nicht angemeldet' });
+  if (!isAdmin(req)) return res.status(currentUser(req) ? 403 : 401).json({ error: currentUser(req) ? 'Die Redaktion hat nur Zugriff auf die Live-Kamera' : 'Nicht angemeldet' });
   if (req.method !== 'GET' && !sameOrigin(req)) return res.status(403).json({ error: 'Ungültige Herkunft' });
   req.user = currentUser(req);
   next();
@@ -346,6 +394,10 @@ async function saveStream(req, dest, max) {
     throw e;
   }
 }
+/** Hashtags vereinheitlichen: „#Wort“, ohne Leer-/Sonderzeichen, max. 8 Stück. */
+const normTags = (list) => [...new Set((Array.isArray(list) ? list : String(list || '').split(/[\s,]+/))
+  .map((t) => '#' + String(t).replace(/^#+/, '').replace(/[^\p{L}\p{N}_-]/gu, '').slice(0, 30))
+  .filter((t) => t.length > 1))].slice(0, 8);
 const contentType = (req) => (req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
 
 const prettyName = (file) => {
@@ -353,13 +405,15 @@ const prettyName = (file) => {
   return n.charAt(0).toUpperCase() + n.slice(1);
 };
 
+/** Mitgelieferte und eigene Dateien zusammen; eigene gewinnen bei gleichem Namen. Gelöschte mitgelieferte bleiben weg. */
 async function listAssets(kind) {
-  const dir = ASSET_DIRS[kind];
-  let files = [];
-  try { files = await fsp.readdir(dir); } catch { /* leer */ }
   const meta = db.assets[kind];
-  return files
-    .filter((f) => !f.startsWith('.') && ASSET_EXT[kind].includes(path.extname(f).toLowerCase()))
+  const set = new Set();
+  for (const dir of [ASSET_DIRS[kind], BUILTIN_DIRS[kind]]) {
+    try { for (const f of await fsp.readdir(dir)) set.add(f); } catch { /* leer */ }
+  }
+  return [...set]
+    .filter((f) => !f.startsWith('.') && ASSET_EXT[kind].includes(path.extname(f).toLowerCase()) && !meta[f]?.removed)
     .sort((a, b) => a.localeCompare(b, 'de', { numeric: true }))
     .map((file) => ({
       file,
@@ -372,13 +426,16 @@ async function listAssets(kind) {
 const itemUrl = (file) => (file ? `/media/${file}` : null);
 const publicItem = (i) => ({
   id: i.id, kind: i.kind, url: i.asset ? `/assets/media/${encodeURIComponent(i.asset)}` : itemUrl(i.file), thumb: itemUrl(i.thumb), title: i.title || '', createdAt: i.createdAt, ratio: i.ratio || null,
+  // Bühne: angepinnt (mit Reihenfolge) oder für die Bühne ausgeblendet
+  pin: !!i.stagePin, order: i.stageOrder ?? null, stageHide: !!i.stageHide,
+  moment: i.moment ? { by: i.moment.by, avatar: i.moment.avatar || null, caption: i.moment.caption || '', tags: i.moment.tags || [], at: i.moment.at } : null,
 });
 const adminItem = (i) => ({ ...publicItem(i), onWall: !!i.onWall, shared: i.shared, reviewed: i.reviewed, station: i.station, frame: i.frame });
 
 async function deleteItem(item) {
   db.items = db.items.filter((i) => i !== item);
   for (const f of [item.file, item.thumb]) if (f) await fsp.rm(path.join(UPLOADS, f), { force: true });
-  if (item.asset) await fsp.rm(path.join(MEDIA_DIR, item.asset), { force: true });
+  if (item.asset) for (const d of MEDIA_DIRS) await fsp.rm(path.join(d, item.asset), { force: true });
   save();
 }
 
@@ -387,8 +444,8 @@ const MEDIA_EXT = Object.fromEntries(Object.entries(MEDIA_TYPES).map(([type, ext
 MEDIA_EXT['.jpeg'] = 'image';
 async function syncMediaFolder() {
   let files = [];
-  try { files = await fsp.readdir(MEDIA_DIR); } catch { return; }
-  files = files.filter((f) => !f.startsWith('.') && MEDIA_EXT[path.extname(f).toLowerCase()]);
+  for (const d of MEDIA_DIRS) { try { files.push(...await fsp.readdir(d)); } catch { /* fehlt */ } }
+  files = [...new Set(files)].filter((f) => !f.startsWith('.') && MEDIA_EXT[path.extname(f).toLowerCase()]);
   const known = new Set(db.items.filter((i) => i.asset).map((i) => i.asset));
   let changed = false;
   for (const f of files) {
@@ -448,6 +505,7 @@ app.use((req, res, next) => {
 // Hochgeladene Dateien nie als aktives Dokument ausführen lassen
 const passive = (res) => res.set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
 app.use('/media', express.static(UPLOADS, { index: false, dotfiles: 'deny', maxAge: '7d', immutable: true, setHeaders: passive }));
+app.use('/assets', express.static(USER_ASSETS, { index: false, dotfiles: 'deny', maxAge: '5m', setHeaders: passive }));
 app.use('/assets', express.static(ASSETS, { index: false, dotfiles: 'deny', maxAge: '5m', setHeaders: passive }));
 app.use(express.static(path.join(ROOT, 'public'), { index: false, dotfiles: 'deny', maxAge: 0 }));
 
@@ -493,7 +551,9 @@ app.get('/vendor/fonts/:file', (req, res) => {
 });
 
 function logoUrl() {
-  for (const ext of ['.svg', '.png', '.webp']) if (fs.existsSync(path.join(ASSETS, 'logo' + ext))) return '/assets/logo' + ext;
+  for (const dir of [USER_ASSETS, ASSETS]) {
+    for (const ext of ['.svg', '.png', '.webp']) if (fs.existsSync(path.join(dir, 'logo' + ext))) return '/assets/logo' + ext;
+  }
   return null;
 }
 
@@ -553,7 +613,9 @@ app.post('/api/photos', express.raw({ type: 'image/jpeg', limit: MAX_PHOTO }), a
 const findPhoto = (id) => db.items.find((i) => i.id === id && i.kind === 'photo');
 /** Teilbare Inhalte: Fotos der Stationen immer (Link kennt nur der Gast), Bilder/Videos nur solange sie auf der Wall sind. */
 const findShareable = (id) => db.items.find((i) => i.id === id && (i.kind === 'photo' || i.onWall));
-const itemFilePath = (item) => (item.asset ? path.join(MEDIA_DIR, item.asset) : path.join(UPLOADS, item.file));
+const itemFilePath = (item) => (item.asset
+  ? MEDIA_DIRS.map((d) => path.join(d, item.asset)).find((f) => fs.existsSync(f)) || path.join(MEDIA_DIR, item.asset)
+  : path.join(UPLOADS, item.file));
 
 app.get('/api/photos/:id/qr.svg', async (req, res) => {
   if (!findPhoto(req.params.id)) return res.status(404).end();
@@ -623,7 +685,7 @@ app.post('/api/admin/logout', (req, res) => {
 });
 app.get('/api/admin/me', (req, res) => {
   const user = currentUser(req);
-  res.json({ admin: !!user, user: user ? publicUser(user) : null });
+  res.json({ admin: !!user && user.role !== 'redaktion', editor: !!user, user: user ? publicUser(user) : null });
 });
 
 const validPassword = (pw) => typeof pw === 'string' && pw.length >= 6 && pw.length <= 100;
@@ -640,7 +702,7 @@ function setPassword(user, password) {
 }
 
 // Eigenes Passwort ändern
-app.post('/api/admin/password', requireAdmin, (req, res) => {
+app.post('/api/admin/password', requireEditor, (req, res) => {
   if (!rateLimit('pw:' + req.socket.remoteAddress, 10, 10 * 60_000)) return res.status(429).json({ error: 'Zu viele Versuche' });
   const { current, next } = req.body || {};
   if (!checkPassword(req.user, current)) return res.status(403).json({ error: 'Aktuelles Passwort ist falsch' });
@@ -656,7 +718,7 @@ app.post('/api/admin/users', requireGlobal, (req, res) => {
   if (name.length < 2) return res.status(400).json({ error: 'Bitte einen Namen angeben' });
   if (db.users.length >= 50) return res.status(400).json({ error: 'Zu viele Benutzer' });
   if (db.users.some((u) => u.name.toLowerCase() === name.toLowerCase())) return res.status(409).json({ error: 'Diesen Namen gibt es schon' });
-  const user = { id: newId(), name, role: 'admin', avatar: null, pass: null };
+  const user = { id: newId(), name, role: req.body?.role === 'redaktion' ? 'redaktion' : 'admin', avatar: null, pass: null };
   db.users.push(user);
   save();
   res.status(201).json({ user: publicUser(user) });
@@ -668,7 +730,7 @@ app.patch('/api/admin/users/:id', requireGlobal, (req, res) => {
   const { name, password, role } = req.body || {};
   if (password !== undefined && !validPassword(password)) return res.status(400).json({ error: 'Das Passwort muss 6 bis 100 Zeichen lang sein' });
   if (role !== undefined) {
-    if (!['admin', 'global'].includes(role)) return res.status(400).json({ error: 'Unbekannte Rolle' });
+    if (!['admin', 'global', 'redaktion'].includes(role)) return res.status(400).json({ error: 'Unbekannte Rolle' });
     if (user.role === 'global' && role !== 'global' && db.users.filter((u) => u.role === 'global').length < 2) {
       return res.status(409).json({ error: 'Es muss mindestens einen Global Admin geben' });
     }
@@ -694,7 +756,7 @@ app.delete('/api/admin/users/:id', requireGlobal, async (req, res) => {
 });
 
 // Profilbild: der Global Admin für alle, jeder für sich selbst
-app.put('/api/admin/users/:id/avatar', requireAdmin, express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '6mb' }), async (req, res) => {
+app.put('/api/admin/users/:id/avatar', requireEditor, express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: MAX_MEMORY }), async (req, res) => {
   const user = db.users.find((u) => u.id === req.params.id);
   if (!user) return res.status(404).json({ error: 'Benutzer nicht gefunden' });
   if (req.user.role !== 'global' && req.user !== user) return res.status(403).json({ error: 'Das darf nur der Global Admin' });
@@ -729,6 +791,7 @@ app.get('/api/admin/overview', requireAdmin, async (req, res) => {
       hunt: `${publicBase(req)}/hunt`,
       wall: `http://${host}:${PORT}/`,
       station: HTTPS_PORT ? `https://${host}:${HTTPS_PORT}/station` : `http://${host}:${PORT}/station`,
+      live: `http://${host}:${PORT}/live`,
       download: publicBase(req),
     },
   });
@@ -775,7 +838,7 @@ app.post('/api/admin/media', requireAdmin, async (req, res) => {
   res.status(201).json({ item: adminItem(item) });
 });
 
-app.put('/api/admin/items/:id/thumb', requireAdmin, express.raw({ type: 'image/jpeg', limit: '3mb' }), async (req, res) => {
+app.put('/api/admin/items/:id/thumb', requireAdmin, express.raw({ type: 'image/jpeg', limit: MAX_MEMORY }), async (req, res) => {
   const item = db.items.find((i) => i.id === req.params.id);
   if (!item) return res.status(404).json({ error: 'Nicht gefunden' });
   const buf = req.body;
@@ -791,8 +854,16 @@ app.put('/api/admin/items/:id/thumb', requireAdmin, express.raw({ type: 'image/j
 app.patch('/api/admin/items/:id', requireAdmin, (req, res) => {
   const item = db.items.find((i) => i.id === req.params.id);
   if (!item) return res.status(404).json({ error: 'Nicht gefunden' });
-  const { onWall, title } = req.body || {};
+  const { onWall, title, stagePin, stageHide, caption, tags } = req.body || {};
   if (typeof title === 'string') item.title = clean(title, 80);
+  if (typeof stagePin === 'boolean') {
+    item.stagePin = stagePin;
+    if (stagePin) item.stageOrder = Math.max(0, ...db.items.filter((i) => i.stagePin && i !== item).map((i) => i.stageOrder ?? 0)) + 1;
+    else delete item.stageOrder;
+  }
+  if (typeof stageHide === 'boolean') item.stageHide = stageHide;
+  if (item.moment && typeof caption === 'string') { item.moment.caption = clean(caption, 200); item.title = clean(caption, 80); }
+  if (item.moment && Array.isArray(tags)) item.moment.tags = normTags(tags);
   if (typeof onWall === 'boolean') {
     if (onWall && item.kind === 'photo' && !item.shared) {
       return res.status(409).json({ error: 'Der Gast hat der Anzeige auf der Wall nicht zugestimmt' });
@@ -803,6 +874,16 @@ app.patch('/api/admin/items/:id', requireAdmin, (req, res) => {
   save();
   broadcast('items', { added: onWall === true ? item.id : null });
   res.json({ item: adminItem(item) });
+});
+
+// Reihenfolge der Bühnen-Playlist (angepinnte Inhalte)
+app.put('/api/admin/stage/order', requireAdmin, (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : null;
+  if (!ids) return res.status(400).json({ error: 'Reihenfolge fehlt' });
+  ids.forEach((id, n) => { const it = db.items.find((i) => i.id === id && i.stagePin); if (it) it.stageOrder = n + 1; });
+  save();
+  broadcast('items');
+  res.json({ ok: true });
 });
 
 app.delete('/api/admin/items/:id', requireAdmin, async (req, res) => {
@@ -833,7 +914,8 @@ app.post('/api/admin/assets/:kind', requireAdmin, assetKind, async (req, res) =>
   }
   const base = clean(String(req.query.name || ''), 80).replace(/\.[a-z0-9]+$/i, '').replace(/[^a-zA-Z0-9äöüÄÖÜß_-]+/g, '-').replace(/^-+|-+$/g, '') || kind.slice(0, -1);
   let file = base + ext;
-  for (let n = 2; fs.existsSync(path.join(ASSET_DIRS[kind], file)); n++) file = `${base}-${n}${ext}`;
+  const taken = (f) => fs.existsSync(path.join(ASSET_DIRS[kind], f)) || fs.existsSync(path.join(BUILTIN_DIRS[kind], f));
+  for (let n = 2; taken(file); n++) file = `${base}-${n}${ext}`;
   await saveStream(req, path.join(ASSET_DIRS[kind], file), ext === '.mp4' || ext === '.webm' ? MAX_MEDIA : MAX_ASSET);
   broadcast('settings');
   res.status(201).json({ file });
@@ -854,8 +936,13 @@ app.delete('/api/admin/assets/:kind/:file', requireAdmin, assetKind, async (req,
   const asset = await findAsset(req, res);
   if (!asset) return;
   const { kind } = req.params;
-  await fsp.rm(path.join(ASSET_DIRS[kind], asset.file), { force: true });
-  delete db.assets[kind][asset.file];
+  const own = path.join(ASSET_DIRS[kind], asset.file);
+  if (fs.existsSync(own)) {
+    await fsp.rm(own, { force: true });
+    delete db.assets[kind][asset.file];
+  } else {
+    db.assets[kind][asset.file] = { removed: true }; // mitgelieferte Datei: nur ausblenden, bleibt nach Updates weg
+  }
   if (kind === 'backgrounds' && db.settings.background === asset.file) db.settings.background = '';
   save();
   broadcast('settings');
@@ -873,6 +960,8 @@ app.post('/api/admin/command', requireAdmin, (req, res) => {
     const list = db.items.filter((i) => i.onWall);
     if (!list.length) return res.status(409).json({ error: 'Es ist noch nichts auf der Wall' });
     broadcast('command', { action: 'show', id: list[crypto.randomInt(list.length)].id }, ['wall']);
+  } else if (action === 'stage' && db.items.some((i) => i.id === id && i.onWall)) {
+    broadcast('command', { action, id }, ['wall']); // „Jetzt auf die Bühne“
   } else if (action === 'close' || action === 'dvd' || action === 'wake') {
     broadcast('command', { action }, ['wall']);
   } else {
@@ -1384,8 +1473,22 @@ app.get('/js/qrcode.js', (_req, res) => {
 /* Paket teilen: alles als ZIP (lib/pack.js)                           */
 /* ------------------------------------------------------------------ */
 require('./lib/pack')({
-  app, requireGlobal, getDb: () => db, ROOT, UPLOADS, ASSETS,
+  app, requireGlobal, getDb: () => db, ROOT, UPLOADS, ASSETS, USER_ASSETS,
   startPasswordActive: () => !!startPassword, globalAdminName: () => globalAdmin().name,
+});
+
+// Sicherung herunterladen/einspielen, Daten aus alten Versionen übernehmen (lib/backup.js)
+let migrationInfo = null;
+try { migrationInfo = JSON.parse(fs.readFileSync(path.join(DATA, 'migration.json'), 'utf8')); } catch { /* keine */ }
+require('./lib/backup')({
+  app, express, requireGlobal, DATA, ROOT, flush,
+  dataInfo: () => ({ migrated: migrationInfo, justMigrated: DATA_INFO.migrated, hint: DATA_INFO.hint, restoredFrom: RESTORED }),
+});
+
+// Live-Modus: Redaktion postet Moments vom Handy (lib/moments.js)
+require('./lib/moments')({
+  app, express, getDb: () => db, save, broadcast, requireEditor, requireAdmin, newId, clean, normTags, saveStream,
+  UPLOADS, MEDIA_TYPES, MAX_MEDIA, MAX_MEMORY, contentType, page, publicItem, adminItem, deleteItem,
 });
 
 require('./lib/portal')({
@@ -1397,10 +1500,14 @@ app.use('/api', (_req, res) => res.status(404).json({ error: 'Nicht gefunden' })
 app.use((_req, res) => res.status(404).type('text').send('Nicht gefunden'));
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, _next) => {
-  const status = err.status || err.statusCode || 500;
-  if (status >= 500) console.error(err);
+  const full = err.code === 'ENOSPC' || err.code === 'EDQUOT';
+  const status = full ? 507 : err.status || err.statusCode || 500;
+  if (status >= 500 && !full) console.error(err);
+  if (full) console.error('Festplatte voll – Upload abgebrochen.');
   if (res.headersSent) return res.destroy();
-  const msg = status === 413 ? 'Datei zu groß' : status >= 500 ? 'Serverfehler' : err.message || 'Fehler';
+  const msg = full ? 'Die Festplatte ist voll. Bitte Platz schaffen (z. B. alte Videos löschen) und erneut versuchen.'
+    : status === 413 ? (MAX_MEDIA < Infinity ? `Datei zu groß (Grenze ${process.env.MAX_UPLOAD_MB} MB, einstellbar mit MAX_UPLOAD_MB)` : 'Datei zu groß für den Arbeitsspeicher')
+      : status >= 500 ? 'Serverfehler' : err.message || 'Fehler';
   res.status(status).json({ error: msg });
 });
 
@@ -1451,10 +1558,12 @@ async function main() {
   await syncMediaFolder();
   let watchTimer = null;
   try {
-    fs.watch(MEDIA_DIR, () => {
-      clearTimeout(watchTimer);
-      watchTimer = setTimeout(() => syncMediaFolder().catch((e) => console.error(e)), 1500);
-    });
+    for (const d of MEDIA_DIRS) {
+      fs.watch(d, () => {
+        clearTimeout(watchTimer);
+        watchTimer = setTimeout(() => syncMediaFolder().catch((e) => console.error(e)), 1500);
+      });
+    }
   } catch { /* Ordnerüberwachung nicht verfügbar – Abgleich erfolgt beim Öffnen des Admin-Panels */ }
   const ip = lanIp();
   await new Promise((resolve) => http.createServer(app)
@@ -1491,7 +1600,8 @@ async function main() {
 
   Anmeldung im Admin-Panel als ${globalAdmin().name} (Global Admin)
   Passwort:            ${process.env.ADMIN_PASSWORD ? '(aus ADMIN_PASSWORD)' : startPassword ? `${startPassword}   (Startpasswort, steht auch in ${pwFile.startsWith(ROOT) ? path.relative(ROOT, pwFile) : pwFile})` : '(wurde im Admin-Panel geändert)'}
-${httpsOk ? '\n  Hinweis: Die Kamera im Handy-Browser funktioniert nur über HTTPS. Beim ersten Öffnen der\n  Fotostation die Zertifikatswarnung einmalig bestätigen ("Erweitert" -> "Trotzdem fortfahren").\n' : ''}`);
+  Daten:               ${DATA}
+${DATA_INFO.migrated ? `\n  ✔ Alte Daten übernommen aus ${DATA_INFO.migrated}\n    (Uploads, Benutzer, Passwörter, Einstellungen – das Original bleibt unverändert).\n` : ''}${DATA_INFO.hint ? `\n  Hinweis: In ${DATA_INFO.hint} liegen andere Daten. Übernehmen: Admin-Panel → System → Sicherung.\n` : ''}${httpsOk ? '\n  Hinweis: Die Kamera im Handy-Browser funktioniert nur über HTTPS. Beim ersten Öffnen der\n  Fotostation die Zertifikatswarnung einmalig bestätigen ("Erweitert" -> "Trotzdem fortfahren").\n' : ''}`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

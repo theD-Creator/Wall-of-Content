@@ -32,6 +32,10 @@ Für alle, die die Wall of Content betreiben, anpassen oder weiterentwickeln. Di
 | `server.js` | Der Server: Einstellungen, Speicherung, Anmeldung, API-Routen, Color Hunt, Quiz, Verbund-Wall |
 | `lib/pack.js`, `lib/zip.js` | Paket teilen: komplette Wall of Content als ZIP (eigener ZIP-Schreiber mit ZIP64, ohne Zusatzpakete) |
 | `lib/portal.js` | Besucher-App: Besucherprofile, Live-Programm, Challenges, Merch-Shop mit Coupons, Feedback |
+| `lib/moments.js` | Live-Modus: Moments der Redaktion (`/live`, Upload, Vorschaubild, eigene Moments) |
+| `lib/datadir.js` | Datenordner bestimmen (`~/Wall of Content Daten`), alte Installationen finden und automatisch übernehmen |
+| `lib/backup.js`, `lib/unzip.js` | Sicherung als ZIP herunterladen/einspielen, Übernahme aus altem Ordner; eigener ZIP-Leser (ZIP64, Deflate) |
+| `lib/supervisor.js` | Wächterprozess: startet den Server als Kindprozess und nach Einspielen einer Sicherung neu (Exit-Code 75) |
 | `public/` | Ausgelieferte Seiten: `wall.html`, `station.html`, `hunt.html`, `quiz.html`, `portal.html` (Besucher-App), `redeem.html` (Coupon einlösen), `admin.html` |
 | `public/js/` | `common.js` (gemeinsame Helfer, Vollbild, Kopieren), `qrscan.js` (QR-Scanner), `wall.js`, `station.js`, `hunt.js`, `quiz.js`, `portal.js`, `redeem.js`, `admin.js`, `admin-portal.js`, `admin-show.js` (Show-Modus), `admin-pack.js` (Paket teilen), `admin-share.js` (Teilen-Dialog mit QR), `print.js` |
 | `public/css/style.css` | Gemeinsames Stylesheet für alle Seiten (klassisches Design) |
@@ -41,11 +45,27 @@ Für alle, die die Wall of Content betreiben, anpassen oder weiterentwickeln. Di
 | `assets/media/` | Bilder/Videos, die automatisch auf der Wall erscheinen (Ordner wird überwacht) |
 | `assets/avatars/` | Profilbilder der Admin-Benutzer |
 | `assets/logo.svg` | Logo auf Wall, Station, Download-Seite und Admin-Panel |
-| `data/` | **Laufzeitdaten** (nicht im Git) – siehe unten |
+| `~/Wall of Content Daten/` | **Laufzeitdaten** außerhalb des Programmordners – siehe unten (ältere Versionen: `data/`) |
 | `docs/` | Anleitungen und Screenshots |
 | `Start-Mac.command` | Startskript für macOS (lädt bei Bedarf Node.js in `.runtime/`) |
 
-### Laufzeitdaten in `data/`
+### Laufzeitdaten in `~/Wall of Content Daten`
+
+Der Datenordner liegt seit dieser Version außerhalb des Programmordners, damit eine neu heruntergeladene Version ihn
+wiederfindet (`DATA_DIR` überschreibt den Ort). Ablauf in `lib/datadir.js` beim Start:
+
+1. `DATA_DIR` gesetzt → dieser Ordner.
+2. `~/Wall of Content Daten/db.json` vorhanden → dieser Ordner. Liegt im Programmordner ein neuerer, noch nicht übernommener
+   `data/`-Stand (z. B. aus „Paket teilen“), gibt es einen Hinweis im Terminal und unter System → Sicherung.
+3. Sonst wird der neueste alte Stand kopiert: zuerst `<Programm>/data`, dann ältere Installationen (Ordner mit `server.js`
+   und `data/db.json`) neben dem Programmordner, in Downloads, Desktop/Schreibtisch, Documents/Dokumente und im
+   Benutzerordner (Tiefe ≤ 4, höchstens 4 s). Eigene Dateien aus dem alten `assets/` (frames, backgrounds, media, avatars,
+   logo), die es in der neuen Version nicht oder anders gibt, kommen nach `<Daten>/assets`. Im alten Ordner entsteht
+   `UMGEZOGEN.txt`, im neuen `migration.json`.
+
+Eigene Rahmen, Hintergründe, Profilbilder, Medien und ein eigenes Logo liegen in `<Daten>/assets/…`; `/assets/…` liefert
+zuerst diese und dann die mitgelieferten Dateien aus `assets/` aus. Gelöschte mitgelieferte Rahmen/Hintergründe werden in
+`db.json` als `removed` markiert. `<Daten>/assets/media` und `assets/media` werden beide überwacht.
 
 | Datei/Ordner | Inhalt |
 |---|---|
@@ -56,7 +76,12 @@ Für alle, die die Wall of Content betreiben, anpassen oder weiterentwickeln. Di
 
 `db.json` wird bei jeder Änderung (gebündelt nach 150 ms) über eine temporäre Datei atomar geschrieben.
 
-**Sichern:** Server stoppen, Ordner `data/` kopieren. **Zurücksetzen:** Server stoppen, `data/` wegsichern bzw. löschen, neu starten.
+**Sichern:** Admin-Panel → System → Sicherung herunterladen (ZIP aller Dateien außer Zwischenständen) oder Server stoppen und
+den Datenordner kopieren. **Einspielen/Übernehmen:** Der neue Stand wird geprüft und nach `<Daten>/.restore-pending` gelegt,
+der Server beendet sich mit Code 75 und `lib/supervisor.js` startet ihn neu. Beim Start verschiebt `applyPending()` den
+bisherigen Stand nach `<Daten>/.vorher-<Datum>` (die zwei neuesten bleiben) und übernimmt den neuen. Ohne Wächter
+(`WOC_NO_SUPERVISOR=1`, `node --watch`) muss man selbst neu starten. **Zurücksetzen:** Server stoppen, Datenordner
+wegsichern bzw. löschen, neu starten.
 
 ## Starten und Konfiguration
 
@@ -78,7 +103,7 @@ Für die Entwicklung startet `npm run dev` den Server mit automatischem Neustart
 | `LAN_IP` | automatisch | Adresse des Rechners im WLAN, falls die automatische Erkennung falsch liegt |
 | `DATA_DIR` | `./data` | Speicherort der Laufzeitdaten |
 | `ASSETS_DIR` | `./assets` | Ordner mit `frames/`, `backgrounds/`, `media/`, `avatars/` |
-| `MAX_UPLOAD_MB` | `1024` | Maximale Größe von Medien- und Hintergrundvideo-Uploads im Admin-Panel |
+| `MAX_UPLOAD_MB` | (keine) | Optionale Höchstgröße für Uploads im Admin-Panel. Ohne Angabe gibt es keine Grenze, nur der freie Speicherplatz zählt |
 
 Alle übrigen Einstellungen (Titel, Farben, Zeiten, Verbund-Wall …) werden im Admin-Panel gesetzt und in `db.json` gespeichert.
 Für QR-Codes kann im Admin-Panel eine feste „Öffentliche Adresse“ eingetragen werden.
@@ -94,7 +119,8 @@ freigeben. WLANs mit „Client-Isolation“ (häufig Gäste-WLANs) funktionieren
 | `/station` | Fotostation | über HTTPS (`:3443`) für die Live-Kamera; `?name=…` für den Stationsnamen |
 | `/quiz` | Quiz-iPad | zeigt per eingebettetem Rahmen die Wall, solange das Quiz nicht gestartet ist; `?pos=N` wird an die Wall weitergegeben |
 | `/hunt` | Color Hunt | auf den Handys der Gäste |
-| `/admin` | Admin-Panel | Anmeldung erforderlich |
+| `/admin` | Admin-Panel | Anmeldung erforderlich; Rolle `redaktion` wird zu `/live` umgeleitet |
+| `/live` | Live-Kamera der Redaktion | Anmeldung (Redaktion, Admin, Global Admin); Foto/Video per Datei-Eingabe mit `capture`, braucht kein HTTPS |
 | `/p/:id` | Download-Seite eines Fotos | Ziel des QR-Codes an der Fotostation |
 | `/app` | Besucher-App | Tabs per `#programm`, `#challenges`, `#shop`, `#feedback`; Kurzadressen `/programm`, `/challenges`, `/shop`, `/feedback` |
 | `/c/:token` | Ziel der Challenge- und Stations-QR-Codes | schreibt gut und leitet zur Besucher-App weiter |
@@ -112,7 +138,7 @@ Alle Antworten sind JSON (außer QR-Codes als SVG). Fehler kommen als `{ "error"
 | `GET /api/state` | Einstellungen (ohne interne Werte), Logo, Hintergrund, aktive Rahmen, Color-Hunt- und Quiz-Status |
 | `GET /api/wall` | Inhalte, die auf der Wall gezeigt werden |
 | `GET /api/events?role=wall\|station\|quiz\|admin` | Live-Ereignisse (Server-Sent Events); `admin` nur angemeldet |
-| `POST /api/photos?share=0\|1&station=…&frame=…` | Foto einer Station hochladen (JPEG im Body, max. 12 MB) |
+| `POST /api/photos?share=0\|1&station=…&frame=…` | Foto einer Station hochladen (JPEG im Body) |
 | `GET /api/photos/:id/qr.svg` | QR-Code zur Download-Seite |
 | `GET /p/:id`, `GET /p/:id/download` | Download-Seite und Datei-Download |
 
@@ -160,7 +186,11 @@ Ein 8-stelliger Besucher-Code erlaubt das Mitnehmen auf ein anderes Gerät.
 |---|---|
 | Anmeldung | `GET /api/admin/users` (für die Auswahl, ohne Geheimnisse), `POST /api/admin/login` `{ userId, password }`, `POST /api/admin/logout`, `GET /api/admin/me`, `POST /api/admin/password` |
 | Benutzer (nur Global Admin) | `POST /api/admin/users`, `PATCH /api/admin/users/:id` (Name, Rolle, Passwort), `DELETE /api/admin/users/:id`, `PUT /api/admin/users/:id/avatar` (auch für sich selbst) |
-| Übersicht & Steuerung | `GET /api/admin/overview`, `GET /api/admin/qr.svg?text=…`, `PUT /api/admin/settings`, `POST /api/admin/command` (`reload`, `show`, `close`) |
+| Übersicht & Steuerung | `GET /api/admin/overview`, `GET /api/admin/qr.svg?text=…`, `PUT /api/admin/settings`, `POST /api/admin/command` (`reload`, `show`, `stage` = „Jetzt auf die Bühne“, `close`, `dvd`, `wake`) |
+| Bühne | `PATCH /api/admin/items/:id` (`stagePin`, `stageHide`), `PUT /api/admin/stage/order` `{ ids }`; Einstellungen `stageMode` (`alle` \| `playlist`), `browseButton` |
+| Moments | `GET /api/admin/moments`, `PATCH /api/admin/items/:id` (`onWall`, `caption`, `tags`); Einstellungen `momentInstant`, `momentApproval`, `momentTicker`, `momentHighlightMin`, `momentTags` |
+| Live-Kamera (Redaktion) | `GET /api/live/me`, `GET /api/live/moments`, `POST /api/live/moments?caption=&tags=&w=&h=` (Body = Datei), `PUT /api/live/moments/:id/thumb`, `DELETE /api/live/moments/:id` |
+| Sicherung (nur Global Admin) | `GET /api/admin/backup/info`, `GET /api/admin/backup.zip`, `POST /api/admin/backup/restore` (Body = ZIP), `POST /api/admin/backup/import` `{ path }`, `GET /api/admin/backup/old` |
 | Inhalte | `POST /api/admin/media`, `PUT /api/admin/items/:id/thumb`, `PATCH /api/admin/items/:id`, `DELETE /api/admin/items/:id` |
 | Rahmen & Hintergründe | `POST /api/admin/assets/:kind`, `PATCH /api/admin/assets/:kind/:file`, `DELETE /api/admin/assets/:kind/:file` |
 | Color Hunt | `PUT /api/admin/hunt` (`active`, `countdownMinutes`, `extendMinutes`, `countdown: null`, `winnerId`, `showWinner`), `DELETE /api/admin/hunt/players/:id`, `POST /api/admin/hunt/reset` |
@@ -212,6 +242,18 @@ Stornieren gibt Punkte und Bestand zurück.
 `applyDesign()` in `common.js` gleicht ihn mit den Einstellungen ab. `neu.css` greift nur bei `data-design="neu"`,
 dadurch bleibt das klassische Aussehen unverändert. Die Schriften kommen aus `@fontsource-variable/outfit` und
 `@fontsource-variable/dm-sans` und werden lokal unter `/vendor/fonts/…` ausgeliefert.
+
+**Bühne, „Alle Inhalte“, Moments** (`public/js/wall-layouts.js`). `/api/wall` liefert pro Inhalt zusätzlich `pin`,
+`order`, `stageHide` und `moment` (`by`, `avatar`, `caption`, `tags`, `at`). Die Bühne baut ihre Reihenfolge in
+`buildQueue()`: im Modus `playlist` nur angepinnte nach `order`, sonst alle gemischt (angepinnte doppelt), ohne `stageHide`.
+Ändert sich die Playlist, wird die Reihenfolge neu aufgebaut. Neue Moments springen nur bei `momentInstant` auf die Bühne;
+`tickerItem()` zeigt bei `momentTicker` die fünf neuesten Moments im Band (Wechsel alle 8 s). `openBrowser()` ist das
+Raster „Alle Inhalte“ (z-index unter dem Viewer, schließt nach 45 s ohne Berührung). `feature(item)` setzt einen Inhalt
+auf Befehl `stage` auf die Bühne bzw. in die große Mosaik-Kachel.
+
+**Video-Vorschau** (`VideoPreview` in `common.js`). Videos in Kacheln, Leiste, Mosaik, „Alle Inhalte“ und Admin-Liste
+starten als Standbild. Ein Abgleich alle 1,5 s tauscht sichtbare Standbilder gegen stumm laufende Videos (höchstens 4,
+auf iOS 2) und unsichtbare/entfernte Videos zurück. Während der Viewer offen ist oder das DVD-Logo läuft, pausieren alle.
 
 **Wall-Layouts** (`public/js/wall-layouts.js`). Im Design „neu“ übergibt `wall.js` die Inhalte an ein Layout
 (`wallLayout`: `buehne`, `mosaik`, `wechsel`) statt an die Physik. Ein Layout bekommt `update(items, {fresh})`,
@@ -297,12 +339,18 @@ die Fullscreen-API vorhanden ist, auch `webkit`-Variante), Taste F schaltet um. 
 - **Admin-Sitzungen:** zufälliges Token im Cookie `woc_admin` (`HttpOnly`, `SameSite=Strict`), 12 Stunden gültig,
   nur im Arbeitsspeicher – nach einem Neustart des Servers muss man sich neu anmelden. Beim Passwortwechsel werden
   andere Sitzungen desselben Benutzers beendet.
-- **Rollen:** Nur der Global Admin darf Benutzer anlegen, löschen und Passwörter vergeben – das prüft der Server.
+- **Rollen:** Nur der Global Admin darf Benutzer anlegen, löschen, Passwörter vergeben und Sicherungen verwalten – das
+  prüft der Server. Die Rolle `redaktion` gilt für `requireAdmin` nicht als Admin (403); sie darf nur `/api/live/*`,
+  das eigene Passwort und das eigene Profilbild.
+- **Sicherung einspielen:** ZIP-Pfade mit `..` oder absolute Pfade werden abgelehnt; `db.json` muss gültiges JSON sein;
+  der vorherige Stand bleibt als `.vorher-…` erhalten.
 - **Schutz vor fremden Seiten:** Ändernde Admin-Anfragen werden nur von derselben Herkunft (`Origin`) angenommen.
 - **Begrenzungen:** Anmeldeversuche (10 pro 10 Minuten und Gerät), Passwortänderungen, Fotos, Color-Hunt- und
   Quiz-Anfragen, neue Besucherprofile, Scans, Käufe, Feedback und Besucher-Code-Eingaben sind mengenbegrenzt.
-- **Uploads:** Dateityp wird geprüft (Fotos müssen echte JPEGs sein), Größen sind begrenzt, Dateinamen erzeugt der
-  Server selbst. Hochgeladene Dateien werden mit einer strengen Content-Security-Policy (`sandbox`) ausgeliefert.
+- **Uploads:** Dateityp wird geprüft (Fotos müssen echte JPEGs sein), Dateinamen erzeugt der Server selbst. Gestreamte
+  Uploads (Medien, Rahmen, Hintergründe, Moments) haben keine feste Größengrenze (optional `MAX_UPLOAD_MB`); was komplett
+  im Arbeitsspeicher landet (Stationsfotos, Profil-/Shop-Bilder, Vorschaubilder), ist auf 512 MB begrenzt. Volle
+  Festplatte → HTTP 507 mit verständlicher Meldung. Hochgeladene Dateien werden mit einer strengen Content-Security-Policy (`sandbox`) ausgeliefert.
 - **Seiten:** Content-Security-Policy ohne fremde Skripte, `X-Frame-Options: SAMEORIGIN`, `nosniff`, kein Referrer.
 - **Datenschutz:** Fotos ohne Haken „auf der Wall anzeigen“ erscheinen nie auf der Wall, sind aber über ihren
   (nicht erratbaren) Download-Link erreichbar. Optional werden Fotos nach X Stunden automatisch gelöscht (Einstellungen).

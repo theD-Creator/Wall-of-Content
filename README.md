@@ -36,7 +36,7 @@ npm start
 ```
 
 Beim Start zeigt das Terminal alle Adressen und das **Startpasswort** für **David R.** (Global Admin) an. Es steht auch in
-`data/admin-password.txt`. David R. vergibt im Admin-Panel unter **Benutzer** die Passwörter für David K., Emily B.,
+`admin-password.txt` im Datenordner (`~/Wall of Content Daten`). David R. vergibt im Admin-Panel unter **Benutzer** die Passwörter für David K., Emily B.,
 Jakob K. und Lilian H. Passwort vergessen? `ADMIN_PASSWORD=neuesPasswort npm start` setzt das Passwort des Global Admins.
 
 Voraussetzung: Node.js 18 oder neuer. Laptop, Stations-Handys und die Handys der Gäste müssen im selben WLAN sein.
@@ -79,10 +79,18 @@ Alles in diesen Ordnern wird automatisch verwendet – einfach Dateien hineinkop
 
 Position und Größe des Fotofensters lassen sich im Admin-Panel unter Einstellungen → „Fotofenster“ anpassen.
 
-Fotos der Stationen, Uploads aus dem Admin-Panel und die Einstellungen liegen in `data/` (nicht im Git).
+Fotos der Stationen, Uploads, Benutzer, Einstellungen und eigene Rahmen/Hintergründe liegen im Ordner
+**`~/Wall of Content Daten`** – außerhalb des Programmordners. Eine neu heruntergeladene Version findet sie automatisch; beim
+ersten Start werden Daten älterer Versionen (`data/` im Programmordner oder ältere Wall-of-Content-Ordner in Downloads,
+Schreibtisch, Dokumente) automatisch übernommen. Sicherung herunterladen/einspielen: Admin-Panel → System → 💾 Sicherung.
 
 ## Admin-Panel
 
+- **🎭 Bühne:** Playlist (anpinnen, Reihenfolge, nur für die Bühne ausblenden, „▶ Jetzt“), Modus „Alle“ oder „Nur Playlist“,
+  Knopf **„Alle Inhalte“** auf der Wall zum Stöbern mit Filtern und Hashtags.
+- **📍 Moments (Live-Modus):** Die Redaktion (eigene Rolle) postet unter `/live` Fotos/Videos mit Text und Hashtags vom Handy.
+  Optionen: sofort groß auf die Bühne, erst nach Freigabe, Live-Ticker im Band, Dauer des LIVE-Abzeichens, Hashtag-Vorschläge.
+- **💾 Sicherung:** alle Daten als ZIP herunterladen, einspielen oder aus einem alten Ordner übernehmen (startet sich selbst neu).
 - **🎬 Show:** die wichtigsten Schalter für die laufende Veranstaltung, jede Änderung wirkt sofort – Live-Steuerung der Wall,
   Color Hunt/Quiz/Stationen an/aus, Tempo, Kachelgröße, QR-Größe, Vorladen, DVD-Logo, Vollbild.
 - **📦 Paket teilen:** die komplette Wall of Content als ZIP – App, alle Inhalte, Fotos, Einstellungen, Benutzer mit
@@ -107,7 +115,7 @@ Fotos der Stationen, Uploads aus dem Admin-Panel und die Einstellungen liegen in
 | `ADMIN_PASSWORD` | zufällig | Passwort für das Admin-Panel |
 | `DATA_DIR` | `./data` | Speicherort für Fotos, Uploads, Einstellungen |
 | `ASSETS_DIR` | `./assets` | Ordner mit `frames/`, `backgrounds/`, `media/` |
-| `MAX_UPLOAD_MB` | `1024` | Maximale Größe eines Uploads im Admin-Panel |
+| `MAX_UPLOAD_MB` | (keine) | Optionale Höchstgröße für Uploads; ohne Angabe zählt nur der freie Speicherplatz |
 
 Wenn der QR-Code auf eine falsche Adresse zeigt (z. B. mehrere Netzwerke), im Admin-Panel unter
 Einstellungen die „Öffentliche Adresse für QR-Codes“ setzen, z. B. `http://192.168.1.10:3000`.

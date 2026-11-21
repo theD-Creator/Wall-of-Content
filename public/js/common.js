@@ -155,3 +155,79 @@ function applyTheme(settings, backgroundUrl, logoUrl) {
     video.play().catch(() => {});
   }
 }
+
+/**
+ * Bewegte Vorschau für Videos (Wall-Kacheln, Bühnen-Leiste, Mosaik, Admin-Liste).
+ * Videos laufen stumm in Schleife, aber nur, solange sie sichtbar sind, und höchstens `max` gleichzeitig –
+ * sonst würden viele Videos den Rechner ausbremsen. Alle anderen zeigen ein Standbild und rücken nach,
+ * sobald ein Platz frei wird.
+ */
+const VideoPreview = {
+  max: /iPad|iPhone|iPod/.test(navigator.userAgent) ? 2 : 4,
+  paused: false,
+  nodes: new Set(),
+  make(item, attrs = {}) {
+    const still = item.thumb
+      ? el('img', { src: item.thumb, alt: '', draggable: false, decoding: 'async', ...attrs })
+      : el('video', { src: item.url + '#t=0.5', muted: true, playsInline: true, preload: 'metadata', ...attrs });
+    still.dataset.previewUrl = item.url;
+    if (item.thumb) still.dataset.previewPoster = item.thumb;
+    this.nodes.add(still);
+    this.kick();
+    return still;
+  },
+  live() { return [...this.nodes].filter((n) => n.dataset.previewLive).length; },
+  visible(n) {
+    if (!n.isConnected) return false;
+    const r = n.getBoundingClientRect();
+    return r.width > 8 && r.height > 8 && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth;
+  },
+  /** Standbild <-> laufendes Video austauschen, ohne Layout zu ändern. */
+  swap(from, live) {
+    let to;
+    if (live) {
+      to = el('video', { muted: true, loop: true, playsInline: true, autoplay: true, preload: 'auto' });
+      to.muted = true;
+      to.setAttribute('muted', '');
+      if (from.dataset.previewPoster) to.poster = from.dataset.previewPoster;
+      to.src = from.dataset.previewUrl;
+      to.dataset.previewLive = '1';
+      to.addEventListener('error', () => { if (to.isConnected) this.swap(to, false); }, { once: true });
+    } else {
+      to = from.dataset.previewPoster
+        ? el('img', { src: from.dataset.previewPoster, alt: '', draggable: false })
+        : el('video', { src: from.dataset.previewUrl + '#t=0.5', muted: true, playsInline: true, preload: 'metadata' });
+    }
+    to.className = from.className;
+    if (from.getAttribute('style')) to.setAttribute('style', from.getAttribute('style'));
+    for (const k of ['previewUrl', 'previewPoster']) if (from.dataset[k]) to.dataset[k] = from.dataset[k];
+    this.nodes.delete(from);
+    this.nodes.add(to);
+    if (from.isConnected) from.replaceWith(to);
+    if (from.tagName === 'VIDEO') { from.pause(); from.removeAttribute('src'); from.load(); }
+    if (live) to.play?.().catch(() => {});
+    return to;
+  },
+  sweep() {
+    for (const n of [...this.nodes]) {
+      if (!n.isConnected) {
+        this.nodes.delete(n);
+        if (n.tagName === 'VIDEO') { n.pause(); n.removeAttribute('src'); n.load(); }
+      } else if (n.dataset.previewLive && (this.paused || !this.visible(n))) {
+        this.swap(n, false);
+      }
+    }
+    if (this.paused) return;
+    let free = this.max - this.live();
+    for (const n of [...this.nodes]) {
+      if (free <= 0) break;
+      if (!n.dataset.previewLive && this.visible(n)) { this.swap(n, true); free--; }
+    }
+  },
+  kick() {
+    clearTimeout(this.t);
+    this.t = setTimeout(() => this.sweep(), 120);
+    if (!this.timer) this.timer = setInterval(() => this.sweep(), 1500);
+  },
+  pause(on) { this.paused = !!on; this.sweep(); },
+};

@@ -30,6 +30,8 @@
         <span class="nav-group">Live</span>
         <button data-tab="show" data-icon="🎬" class="active"><span class="emo">🎬 </span>Show</button>
         <button data-tab="overview" data-icon="🏠">Übersicht</button>
+        <button data-tab="stage" data-icon="🎭">Bühne</button>
+        <button data-tab="moments" data-icon="📍">Moments <span id="momentBadge" class="badge" hidden></span></button>
         <span class="nav-group">Inhalte</span>
         <button data-tab="media" data-icon="🖼️">Inhalte</button>
         <button data-tab="photos" data-icon="📸">Fotos <span id="pendingBadge" class="badge" hidden></span></button>
@@ -44,6 +46,7 @@
         <button data-tab="frames" data-icon="🪟">Rahmen</button>
         <button data-tab="backgrounds" data-icon="🌌">Hintergründe</button>
         <span class="nav-group">System</span>
+        <button data-tab="backup" data-icon="💾"><span class="emo">💾 </span>Sicherung</button>
         <button data-tab="pack" data-icon="📦"><span class="emo">📦 </span>Paket teilen</button>
         <button data-tab="users" data-icon="👥">Benutzer</button>
         <button data-tab="settings" data-icon="⚙️">Einstellungen</button>
@@ -258,11 +261,98 @@
         </div>
       </section>
 
+      <section data-panel="stage" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>🎭 Was läuft auf der Bühne?</h2>
+            <label class="radio-card"><input type="radio" name="stageMode" value="alle" data-setting="stageMode">
+              <span><b>Alle Inhalte</b><small class="muted">Zufällig durch alles, was auf der Wall ist. Angepinnte kommen doppelt so oft.</small></span></label>
+            <label class="radio-card"><input type="radio" name="stageMode" value="playlist" data-setting="stageMode">
+              <span><b>Nur die Playlist</b><small class="muted">Nur angepinnte Inhalte, genau in der Reihenfolge unten. Ohne Playlist läuft alles.</small></span></label>
+            <div class="show-row"><span>Knopf „Alle Inhalte“ auf der Wall</span><label class="switch"><input type="checkbox" data-setting="browseButton"><span></span></label></div>
+            <p class="show-hint">Besucher können damit selbst durch alle Inhalte stöbern, nach Fotos, Videos, Moments und Hashtags filtern und antippen.</p>
+            <label class="show-row"><span>Wechsel alle</span><input type="range" min="4" max="60" step="1" data-setting="stageSeconds" data-unit=" s"><output></output></label>
+          </div>
+          <div class="card">
+            <h2>📌 Playlist <small class="muted" id="playlistCount"></small></h2>
+            <p class="muted small">Reihenfolge per Ziehen oder mit ↑ ↓ ändern. „▶ Jetzt“ zeigt den Inhalt sofort auf der Bühne.</p>
+            <ol id="playlist" class="playlist"></ol>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row wrap" style="justify-content:space-between">
+            <h2>Alle Inhalte</h2>
+            <div id="stageFilter" class="chips"></div>
+          </div>
+          <div id="stageItems" class="stage-grid"></div>
+        </div>
+      </section>
+
+      <section data-panel="moments" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>📍 Live-Modus</h2>
+            <p>Die Redaktion fotografiert oder filmt mit dem Handy unter <b id="liveUrl">/live</b> und schickt <b>Moments</b> mit
+              Bildunterschrift und Hashtags direkt auf die Wall. Konten mit der Rolle „Redaktion“ legst du unter
+              <a href="#" data-goto="users">Benutzer</a> an.</p>
+            <img id="liveQr" class="share-qr" alt="QR-Code zur Live-Kamera" width="160" height="160">
+          </div>
+          <div class="card">
+            <h2>So erscheinen Moments</h2>
+            <div class="show-row"><span>Sofort groß auf die Bühne</span><label class="switch"><input type="checkbox" data-setting="momentInstant"><span></span></label></div>
+            <div class="show-row"><span>Erst nach Freigabe zeigen</span><label class="switch"><input type="checkbox" data-setting="momentApproval"><span></span></label></div>
+            <div class="show-row"><span>Live-Ticker im Band</span><label class="switch"><input type="checkbox" data-setting="momentTicker"><span></span></label></div>
+            <label class="show-row"><span>„LIVE“ für</span><input type="range" min="1" max="120" step="1" data-setting="momentHighlightMin" data-unit=" min"><output></output></label>
+            <label class="field"><span>Hashtag-Vorschläge für die Redaktion</span>
+              <input data-setting="momentTags" maxlength="400" placeholder="#UrbanArtNight #Backstage"></label>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Alle Moments</h2>
+          <div id="momentList" class="moment-list"></div>
+        </div>
+      </section>
+
+      <section data-panel="backup" class="panel">
+        <div id="backupNotice"></div>
+        <div class="grid2">
+          <div class="card">
+            <h2>💾 Wo liegen die Daten?</h2>
+            <p>Uploads, Fotos, Benutzer mit Passwörtern, Einstellungen und eigene Rahmen/Hintergründe liegen <b>außerhalb</b> des
+              Programmordners. Eine neu heruntergeladene Version findet sie deshalb automatisch wieder – du musst nichts kopieren.</p>
+            <div id="backupInfo" class="pack-info"></div>
+            <a id="backupBtn" class="btn primary big" href="/api/admin/backup.zip">💾 Sicherung herunterladen</a>
+            <p class="show-hint">Eine ZIP-Datei mit allen Daten – z. B. für einen anderen Laptop oder als Notfall-Kopie.</p>
+          </div>
+          <div class="card">
+            <h2>📥 Sicherung einspielen</h2>
+            <p>ZIP-Datei aus „Sicherung herunterladen“ oder „Paket teilen“ wählen. Der aktuelle Stand wird vorher automatisch
+              beiseitegelegt (im Datenordner unter <code>.vorher-…</code>).</p>
+            <label class="btn big">ZIP-Datei wählen<input id="restoreInput" type="file" accept=".zip,application/zip" hidden></label>
+            <div id="restoreProgress" class="upload-progress" hidden><i></i></div>
+            <h2>📂 Aus altem Ordner übernehmen</h2>
+            <p>Hast du eine ältere Version heruntergeladen, in der noch deine Daten sind? Dann hier den Ordner angeben
+              (den Programmordner oder seinen <code>data</code>-Ordner).</p>
+            <div id="oldInstalls" class="old-installs"></div>
+            <form id="importForm" class="row wrap">
+              <input name="path" placeholder="/Users/…/Downloads/Wall-of-Content" required style="flex:1;min-width:14rem">
+              <button class="btn primary">Übernehmen</button>
+            </form>
+            <button id="findOld" class="btn small" type="button">🔍 Auf diesem Rechner suchen</button>
+          </div>
+        </div>
+      </section>
+
       <section data-panel="users" class="panel">
         <div id="users" class="players"></div>
         <form id="userForm" class="card" style="max-width:28rem" hidden>
           <h2>Benutzer hinzufügen</h2>
           <input name="name" maxlength="40" placeholder="Name, z. B. Anna M." required>
+          <select name="role">
+            <option value="admin">Admin – voller Zugriff aufs Admin-Panel</option>
+            <option value="redaktion">Redaktion – nur Live-Kamera (Moments)</option>
+          </select>
+          <p class="muted small">Die Redaktion meldet sich auf dem Handy unter <code>/live</code> an und schickt Moments auf die Wall.</p>
           <button class="btn primary">Hinzufügen</button>
         </form>
       </section>
@@ -526,5 +616,7 @@
   <script src="/js/admin-share.js"></script>
   <script src="/js/admin-show.js"></script>
   <script src="/js/admin-pack.js"></script>
+  <script src="/js/admin-backup.js"></script>
+  <script src="/js/admin-live.js"></script>
 </body>
 </html>

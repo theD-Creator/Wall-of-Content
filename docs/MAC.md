@@ -91,7 +91,7 @@ Es öffnet sich ein **Terminal-Fenster** (schwarzes Fenster mit Text). Beim erst
   Quiz (iPad):         http://192.168.178.34:3000/quiz
 
   Anmeldung im Admin-Panel als David R. (Global Admin)
-  Passwort:            Ab3xY7kQ9zLm   (Startpasswort, steht auch in data/admin-password.txt)
+  Passwort:            Ab3xY7kQ9zLm   (Startpasswort, steht auch in admin-password.txt im Datenordner)
 ```
 
 Danach öffnet sich automatisch das **Admin-Panel** im Browser.

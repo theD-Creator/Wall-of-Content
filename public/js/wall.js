@@ -293,9 +293,9 @@
       this.tilt = rand(1.5, 3.5);
       this.hover = false;
 
-      const media = item.thumb || item.kind !== 'video'
-        ? el('img', { src: item.thumb || item.url, alt: '', draggable: false, decoding: 'async' })
-        : el('video', { src: item.url + '#t=0.5', muted: true, playsInline: true, preload: 'metadata' });
+      const media = item.kind === 'video'
+        ? VideoPreview.make(item)
+        : el('img', { src: item.thumb || item.url, alt: '', draggable: false, decoding: 'async' });
       this.el = el('button', { class: 'bubble' + (fresh ? ' fresh' : ''), 'aria-label': item.title || 'Inhalt öffnen' },
         el('span', { class: 'bubble-inner' },
           media,
@@ -627,6 +627,7 @@
     activity();
     closeViewer(true);
     if (layout) layout.pause(true); // Bühne/Mosaik halten an, solange der Inhalt groß gezeigt wird
+    VideoPreview.pause(true); // Vorschau-Videos aus, damit das große Video die volle Leistung hat
     current = item;
     openedAt = performance.now();
     viewerMedia.replaceChildren();
@@ -702,6 +703,7 @@
     if (!current) return;
     current = null;
     if (layout) layout.pause(false);
+    VideoPreview.pause(false);
     activity();
     const video = $('video', viewerMedia);
     if (video) {
@@ -972,6 +974,7 @@
     dvd.manual = !!manual;
     dvd.el.hidden = false;
     document.body.classList.add('dvd-on');
+    VideoPreview.pause(true);
     dvdPrepare();
     dvdColor();
     dvd.x = Math.random() * Math.max(0, innerWidth - dvd.w);
@@ -989,6 +992,7 @@
     dvd.manual = false;
     dvd.el.classList.remove('open', 'corner');
     document.body.classList.remove('dvd-on');
+    if (!current) VideoPreview.pause(false);
     lastT = performance.now();
     setTimeout(() => { if (!dvd.on) dvd.el.hidden = true; }, 400);
   }
@@ -1047,6 +1051,12 @@
       if (c.action === 'show') {
         const item = items.find((i) => i.id === c.id);
         if (item) openViewer(item);
+      }
+      if (c.action === 'stage') { // „Jetzt auf die Bühne“: im neuen Design auf der Bühne, sonst groß öffnen
+        const item = items.find((i) => i.id === c.id);
+        if (!item) return;
+        activity();
+        if (layout && layout.feature) { closeViewer(true); layout.feature(item); } else openViewer(item);
       }
     },
   }, gridMode ? { grid: '1' } : {});

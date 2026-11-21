@@ -123,9 +123,9 @@
   function itemCard(item) {
     const isPhoto = item.kind === 'photo';
     const pending = isPhoto && item.shared && !item.reviewed;
-    const preview = item.thumb || item.kind !== 'video'
-      ? el('img', { src: item.thumb || item.url, alt: '', loading: 'lazy' })
-      : el('video', { src: item.url + '#t=0.5', muted: true, preload: 'metadata' });
+    const preview = item.kind === 'video'
+      ? VideoPreview.make(item)
+      : el('img', { src: item.thumb || item.url, alt: '', loading: 'lazy' });
     const status = !isPhoto ? null
       : !item.shared ? el('span', { class: 'tag', text: 'Nicht geteilt' })
         : pending ? el('span', { class: 'tag warn', text: 'Wartet auf Freigabe' }) : null;
@@ -374,6 +374,7 @@
   });
 
   /* ---------------- Benutzer ---------------- */
+  const ROLE_NAME = { global: 'Global Admin', admin: 'Admin', redaktion: 'Redaktion (nur Live-Kamera)' };
   function renderUsers() {
     const isGlobal = data.me.role === 'global';
     $('#userForm').hidden = !isGlobal;
@@ -394,7 +395,7 @@
       return el('div', { class: 'player user' },
         el('div', { class: 'player-head' }, avatar(u, 'avatar big'),
           el('div', {}, el('b', { text: u.name + (mine ? ' (du)' : '') }),
-            el('div', { class: 'muted small', text: u.role === 'global' ? 'Global Admin' : 'Admin' })),
+            el('div', { class: 'muted small', text: ROLE_NAME[u.role] || 'Admin' })),
           el('span', { class: 'status ' + (u.hasPassword ? 'done' : 'running'), text: u.hasPassword ? 'Passwort gesetzt' : 'Kein Passwort' })),
         isGlobal && !mine && el('form', {
           class: 'row',
@@ -412,6 +413,10 @@
         (isGlobal || mine) && el('div', { class: 'row' },
           el('label', { class: 'btn small' }, 'Profilbild ändern', file),
           mine && el('span', { class: 'muted small', text: 'Dein Passwort änderst du unter „Einstellungen“.' }),
+          isGlobal && !mine && el('select', {
+            class: 'role-select', 'aria-label': 'Rolle',
+            onchange: (e) => call(`/api/admin/users/${u.id}`, { method: 'PATCH', json: { role: e.target.value } }).then(load, load),
+          }, ...Object.entries(ROLE_NAME).map(([v, t]) => el('option', { value: v, text: t, selected: u.role === v }))),
           isGlobal && !mine && el('button', {
             class: 'btn small danger', text: 'Löschen',
             onclick: () => confirm(`Benutzer „${u.name}“ löschen?`) && call(`/api/admin/users/${u.id}`, { method: 'DELETE' }).then(load),
@@ -421,7 +426,7 @@
   $('#userForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      await call('/api/admin/users', { method: 'POST', json: { name: e.target.elements.name.value } });
+      await call('/api/admin/users', { method: 'POST', json: { name: e.target.elements.name.value, role: e.target.elements.role.value } });
       e.target.reset();
       load();
     } catch { /* Meldung kommt aus call() */ }
@@ -605,6 +610,7 @@
 
   async function start() {
     const me = await api('/api/admin/me');
+    if (me.editor && !me.admin) { location.href = '/live'; return; } // Redaktion: nur Live-Kamera
     if (!me.admin) return showLogin();
     // nach dem Anmelden zurück zur Seite, von der man kam (z. B. Coupon einlösen)
     const next = new URLSearchParams(location.search).get('next') || '';

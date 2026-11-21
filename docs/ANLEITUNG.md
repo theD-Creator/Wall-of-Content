@@ -21,6 +21,9 @@ Diese Anleitung erklärt, wie du die Wall of Content startest, einrichtest und w
 15. [Paket teilen: alles in einer ZIP-Datei](#15-paket-teilen-alles-in-einer-zip-datei)
 16. [DVD-Logo (Bildschirmschoner)](#16-dvd-logo-bildschirmschoner)
 17. [Vollbild](#17-vollbild)
+18. [Bühne: Playlist und „Alle Inhalte“](#18-bühne-playlist-und-alle-inhalte)
+19. [Live-Modus: Moments der Redaktion](#19-live-modus-moments-der-redaktion)
+20. [Daten, Updates und Sicherung](#20-daten-updates-und-sicherung)
 
 ---
 
@@ -92,10 +95,12 @@ Im Terminal erscheint dann zum Beispiel:
   Quiz (iPad):         http://192.168.1.10:3000/quiz
 
   Anmeldung im Admin-Panel als David R. (Global Admin)
-  Passwort:            Ab3xY7kQ9zLm   (Startpasswort, steht auch in data/admin-password.txt)
+  Passwort:            Ab3xY7kQ9zLm   (Startpasswort, steht auch in /Users/…/Wall of Content Daten/admin-password.txt)
+  Daten:               /Users/…/Wall of Content Daten
 ```
 
-Beenden mit `Strg + C`. Alle Fotos, Einstellungen und Ranglisten bleiben im Ordner `data/` erhalten.
+Beenden mit `Strg + C`. Alle Fotos, Einstellungen, Benutzer und Ranglisten bleiben im Ordner **„Wall of Content Daten“**
+in deinem Benutzerordner erhalten – auch wenn du eine neue Version herunterlädst (siehe [Daten, Updates und Sicherung](#20-daten-updates-und-sicherung)).
 
 **Updates einspielen:**
 
@@ -107,7 +112,8 @@ git pull
 npm install
 ```
 
-Danach wieder `npm start`.
+Danach wieder `npm start`. Lädst du stattdessen eine neue Version als ZIP herunter, findet sie deine Daten automatisch –
+siehe [Daten, Updates und Sicherung](#20-daten-updates-und-sicherung).
 
 ---
 
@@ -138,7 +144,7 @@ Es gibt fünf Benutzer:
 | David K., Emily B., Jakob K., Lilian H. | Admin – dürfen alles außer die Benutzerverwaltung |
 
 **Erste Anmeldung:** Nur David R. hat am Anfang ein Passwort – das **Startpasswort** aus dem Terminal bzw. aus
-`data/admin-password.txt`. Die anderen Benutzer sind ausgegraut, bis David R. ihnen ein Passwort gibt:
+`admin-password.txt` im Datenordner. Die anderen Benutzer sind ausgegraut, bis David R. ihnen ein Passwort gibt:
 
 1. Als David R. anmelden und den Tab **Benutzer** öffnen.
 2. Beim jeweiligen Benutzer ein Passwort (mind. 6 Zeichen) eintragen und auf **Festlegen** klicken.
@@ -146,8 +152,10 @@ Es gibt fünf Benutzer:
 
 ![Benutzerverwaltung](screenshots/admin-benutzer.jpg)
 
-Im Tab **Benutzer** kann David R. außerdem Profilbilder ändern, neue Benutzer hinzufügen und Benutzer löschen.
-Sobald David R. sein eigenes Passwort ändert, wird `data/admin-password.txt` gelöscht – das Startpasswort gilt dann nicht mehr.
+Im Tab **Benutzer** kann David R. außerdem Profilbilder ändern, neue Benutzer hinzufügen, die Rolle ändern und Benutzer
+löschen. Neben **Admin** gibt es die Rolle **Redaktion**: Sie darf nur Moments mit der Live-Kamera posten (siehe
+[Live-Modus](#19-live-modus-moments-der-redaktion)) und kommt nicht ins Admin-Panel.
+Sobald David R. sein eigenes Passwort ändert, wird `admin-password.txt` gelöscht – das Startpasswort gilt dann nicht mehr.
 
 **Passwort vergessen?** Den Server einmal so starten – dann gilt dieses Passwort für den Global Admin:
 
@@ -253,6 +261,13 @@ Show-Modus unter „QR-Größe“ einstellbar); ist die Quiz-Rangliste eingescha
 Im Tab **Inhalte** Dateien hineinziehen oder auswählen (JPG, PNG, WebP, GIF, MP4, WebM, MOV). Jede Kachel lässt sich
 ein-/ausblenden, betiteln, sofort zeigen oder löschen. Alternativ Dateien direkt in den Ordner `assets/media/` legen –
 sie erscheinen automatisch.
+
+Es gibt **keine feste Größengrenze** mehr – auch lange Videos lassen sich hochladen, solange auf dem Laptop Platz ist.
+Ist die Festplatte voll, meldet das Admin-Panel das verständlich.
+
+**Videos laufen in der Vorschau:** In der Inhaltsliste, in der Leiste der Bühne, im Mosaik und auf den schwebenden Kacheln
+laufen Videos stumm als bewegte Vorschau – aber nur, solange sie sichtbar sind, und höchstens vier gleichzeitig (auf dem
+iPad zwei), damit nichts ruckelt.
 
 Fehlende Vorschaubilder (z. B. für Dateien aus `assets/media/`) erzeugt das Admin-Panel automatisch, sobald es geöffnet
 ist. Mit **📤 Teilen** bekommst du für jeden Inhalt auf der Wall und jedes Foto einen QR-Code und Link zur Download-Seite.
@@ -584,7 +599,7 @@ die Wall oder Stationen neu laden und einen geöffneten Inhalt auf der Wall schl
 | Coupon lässt sich nicht einlösen | Nur angemeldete Team-Mitglieder können einlösen; „Bereits eingelöst“ heißt: der Coupon wurde schon verwendet. |
 | Benutzer kann sich nicht anmelden | David R. muss im Tab **Benutzer** zuerst ein Passwort festlegen. |
 | Passwort vergessen | Server mit `ADMIN_PASSWORD=neuesPasswort npm start` starten (gilt für den Global Admin). |
-| Alles zurücksetzen | Server stoppen, Ordner `data/` sichern und dann löschen, neu starten. |
+| Alles zurücksetzen | Server stoppen, Ordner „Wall of Content Daten“ sichern (oder unter System → Sicherung herunterladen) und dann löschen, neu starten. |
 
 ---
 
@@ -664,3 +679,99 @@ Taste **F** um. Die Besucher-App hat bewusst keinen Vollbild-Knopf.
 Mit **„Vollbild beim ersten Antippen“** (Show-Modus) gehen Wall, Station, Quiz und Color Hunt bei der ersten Berührung
 automatisch in den Vollbildmodus – Browser erlauben das nicht ohne Berührung. Auf dem iPhone gibt es keinen Vollbildmodus
 im Browser; dort die Seite zum Home-Bildschirm hinzufügen.
+
+---
+
+## 18. Bühne: Playlist und „Alle Inhalte“
+
+Im Admin-Panel unter **Live → 🎭 Bühne** legst du fest, was auf der Bühne läuft.
+
+![Bühne im Admin-Panel](screenshots/admin-buehne.jpg)
+
+- **Was läuft auf der Bühne?**
+  - **Alle Inhalte:** zufällig durch alles, was auf der Wall ist. Angepinnte Inhalte kommen doppelt so oft.
+  - **Nur die Playlist:** nur angepinnte Inhalte, genau in der Reihenfolge der Playlist. Ist nichts angepinnt, läuft alles.
+- **📌 Anpinnen** nimmt einen Inhalt in die Playlist auf. Die Reihenfolge änderst du per Ziehen oder mit **↑ ↓**.
+- **👁 Bühne: an / 🙈 Bühne: aus** blendet einen Inhalt nur für die Bühne aus. Im Mosaik und unter „Alle Inhalte“ bleibt
+  er sichtbar.
+- **▶ Jetzt** zeigt einen Inhalt sofort auf der Bühne (im Mosaik in der großen Kachel).
+
+**„Alle Inhalte“ für Besucher:** Oben auf der Wall (Bühne und Mosaik) sitzt der grüne Knopf **▦ Alle Inhalte**. Er öffnet ein
+großes Raster mit allen Inhalten zum Stöbern – mit Filtern für Fotostation, Bilder, Videos, Moments und die Hashtags der
+Moments. Antippen zeigt den Inhalt groß; danach ist man wieder im Raster. Nach 45 Sekunden ohne Berührung schließt sich das
+Raster von selbst. Den Knopf kannst du unter „Bühne“ ausschalten.
+
+![Alle Inhalte auf der Wall](screenshots/wall-alle-inhalte.jpg)
+
+---
+
+## 19. Live-Modus: Moments der Redaktion
+
+Die Redaktion fotografiert oder filmt während der Veranstaltung mit dem eigenen Handy und schickt **Moments** direkt auf
+die Wall – mit Bildunterschrift und Hashtags.
+
+**Einrichten:**
+
+1. Als David R. unter **Benutzer** einen Benutzer mit der Rolle **„Redaktion – nur Live-Kamera“** anlegen und ein Passwort
+   festlegen. (Auch Admins können die Live-Kamera benutzen.)
+2. Unter **Live → 📍 Moments** steht die Adresse der Live-Kamera (`http://<laptop-ip>:3000/live`) mit QR-Code. Die Handys
+   müssen im selben WLAN sein.
+
+**Auf dem Handy:** Profilbild antippen, Passwort eingeben. Dann **Foto aufnehmen**, **Video** oder **Galerie** wählen,
+optional eine Bildunterschrift schreiben, Hashtags antippen (Vorschläge aus dem Admin-Panel) oder eigene eintippen,
+**Posten**. Unten stehen die eigenen Moments mit Status („Auf der Wall“, „Wartet auf Freigabe“) und lassen sich löschen.
+Fotos werden vor dem Hochladen auf eine sinnvolle Größe verkleinert, damit es auch im vollen WLAN schnell geht.
+
+| Live-Kamera | Moment bearbeiten |
+|---|---|
+| ![Live-Kamera](screenshots/live-kamera.jpg) | ![Moment bearbeiten](screenshots/live-moment.jpg) |
+
+**So erscheinen Moments** (unter Moments einstellbar, alles kombinierbar):
+
+| Option | Wirkung |
+|---|---|
+| Sofort groß auf die Bühne | Ein neuer Moment springt sofort auf die Bühne (im Mosaik in die große Kachel). Aus: er läuft ganz normal mit. |
+| Erst nach Freigabe zeigen | Moments warten im Admin-Panel (Badge an „Moments“), bis jemand **✔ Freigeben** klickt. |
+| Live-Ticker im Band | Die neuesten Moments wechseln sich im Band unten ab. |
+| „LIVE“ für … Minuten | So lange trägt ein Moment das pinke **● Live Moment**-Abzeichen, danach „📍 Moment“. |
+| Hashtag-Vorschläge | Diese Hashtags kann die Redaktion mit einem Tipp auswählen. |
+
+Auf der Bühne zeigt ein Moment das Abzeichen, die Bildunterschrift, die Hashtags und wer ihn gepostet hat.
+
+![Moment auf der Bühne](screenshots/wall-moment.jpg)
+
+In der Liste **Alle Moments** kannst du Text und Hashtags nachträglich ändern, Moments freigeben, von der Wall nehmen,
+sofort auf die Bühne holen oder löschen.
+
+![Moments im Admin-Panel](screenshots/admin-moments.jpg)
+
+---
+
+## 20. Daten, Updates und Sicherung
+
+**Wo liegen die Daten?** Alles, was ihr hochladet und einstellt – Inhalte, Fotos, Benutzer mit Passwörtern, Einstellungen,
+Programm, Shop, eigene Rahmen, Hintergründe und Profilbilder – liegt im Ordner **„Wall of Content Daten“** in deinem
+Benutzerordner (auf dem Mac also `/Users/<name>/Wall of Content Daten`), nicht mehr im Programmordner. Das Terminal zeigt den
+Pfad beim Start unter „Daten:“ an.
+
+**Neue Version herunterladen:** Einfach die neue Version entpacken und starten – sie findet den Datenordner automatisch.
+Du musst nichts kopieren und dich nicht neu anmelden.
+
+**Umstieg von einer älteren Version:** Beim ersten Start sucht die App nach alten Daten und übernimmt den neuesten Stand
+automatisch: zuerst `data/` im eigenen Programmordner, dann ältere Wall-of-Content-Ordner daneben, in Downloads,
+Schreibtisch und Dokumente. Kopiert werden Uploads, Fotos, Benutzer, Passwörter, Einstellungen und eigene Dateien aus dem
+alten `assets/`-Ordner. Das Original bleibt unverändert; dort liegt danach eine Datei `UMGEZOGEN.txt`. Das Terminal meldet
+„✔ Alte Daten übernommen aus …“.
+
+**Admin-Panel → System → 💾 Sicherung** (nur Global Admin):
+
+- **Sicherung herunterladen:** eine ZIP-Datei mit allen Daten – z. B. als Notfall-Kopie oder für einen anderen Laptop.
+- **Sicherung einspielen:** ZIP-Datei aus „Sicherung herunterladen“ oder „Paket teilen“ wählen. Die App prüft sie, legt den
+  aktuellen Stand beiseite (im Datenordner unter `.vorher-<Datum>`, die zwei neuesten bleiben) und startet sich von selbst
+  neu. Das Admin-Panel lädt danach automatisch neu.
+- **Aus altem Ordner übernehmen:** Pfad zu einer älteren Version eintragen (oder **🔍 Auf diesem Rechner suchen** und
+  **Übernehmen** antippen). Auch das startet die App von selbst neu.
+
+![Sicherung](screenshots/admin-sicherung.jpg)
+
+Einen anderen Datenordner kannst du mit `DATA_DIR=/pfad npm start` festlegen.
