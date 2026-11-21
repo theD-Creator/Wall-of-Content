@@ -90,8 +90,19 @@ const SETTINGS = {
   qrTimeout: { type: 'int', min: 10, max: 600, def: 60 },
   retentionHours: { type: 'int', min: 0, max: 8760, def: 0 },
   publicUrl: { type: 'url', def: '' },
+  // Show-Modus: Vorladen, QR-Größe, Vollbild, Teilen-QR im Viewer
+  preloadMedia: { type: 'bool', def: true },
+  qrSize: { type: 'int', min: 50, max: 200, def: 100 },
+  autoFullscreen: { type: 'bool', def: false },
+  viewerQr: { type: 'bool', def: true },
+  // DVD-Logo-Bildschirmschoner auf der Wall
+  dvdMode: { type: 'bool', def: false },
+  dvdCorners: { type: 'bool', def: false },
+  dvdIdle: { type: 'num', min: 0.5, max: 120, def: 5 },
+  dvdSpeed: { type: 'num', min: 0.2, max: 5, def: 1 },
 };
 const newId = () => crypto.randomBytes(9).toString('base64url');
+let settingsVersion = Date.now(); // ändert sich bei jeder Einstellungsänderung (Wall holt dann z. B. QR-Codes neu)
 const defaults = () => Object.fromEntries(Object.entries(SETTINGS).map(([k, s]) => [k, s.def]));
 
 function validateSetting(key, value) {
@@ -450,6 +461,7 @@ app.get('/api/state', async (_req, res) => {
   const { publicUrl, ...settings } = db.settings;
   res.json({
     settings,
+    settingsVersion,
     logoUrl: logoUrl(),
     hunt: { active: db.hunt.active, endsAt: db.hunt.endsAt, now: Date.now(), winner: db.hunt.showWinner ? winnerInfo() : null },
     quiz: { active: db.quiz.active, board: db.quiz.showBoard ? quizBoard(10) : null },
@@ -517,32 +529,49 @@ app.post('/api/photos', express.raw({ type: 'image/jpeg', limit: MAX_PHOTO }), a
 });
 
 const findPhoto = (id) => db.items.find((i) => i.id === id && i.kind === 'photo');
+/** Teilbare Inhalte: Fotos der Stationen immer (Link kennt nur der Gast), Bilder/Videos nur solange sie auf der Wall sind. */
+const findShareable = (id) => db.items.find((i) => i.id === id && (i.kind === 'photo' || i.onWall));
+const itemFilePath = (item) => (item.asset ? path.join(MEDIA_DIR, item.asset) : path.join(UPLOADS, item.file));
 
 app.get('/api/photos/:id/qr.svg', async (req, res) => {
   if (!findPhoto(req.params.id)) return res.status(404).end();
   const svg = await QRCode.toString(`${publicBase(req)}/p/${req.params.id}`, { type: 'svg', margin: 2, errorCorrectionLevel: 'M' });
   res.type('image/svg+xml').send(svg);
 });
+// QR-Code im Viewer der Wall: Gäste nehmen den gezeigten Inhalt mit aufs Handy
+app.get('/api/items/:id/qr.svg', async (req, res) => {
+  if (!findShareable(req.params.id)) return res.status(404).end();
+  const svg = await QRCode.toString(`${publicBase(req)}/p/${req.params.id}`, { type: 'svg', margin: 1, errorCorrectionLevel: 'L' });
+  res.type('image/svg+xml').send(svg);
+});
 
 app.get('/p/:id/download', (req, res) => {
-  const item = findPhoto(req.params.id);
-  if (!item) return res.status(404).send('Foto nicht gefunden');
+  const item = findShareable(req.params.id);
+  if (!item) return res.status(404).send('Nicht gefunden');
   const d = new Date(item.createdAt);
   const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  res.download(path.join(UPLOADS, item.file), `foto-${stamp}-${item.id.slice(0, 5)}.jpg`);
+  const file = itemFilePath(item);
+  const base = item.kind === 'photo' ? 'foto' : clean(item.title, 40).replace(/[^a-zA-Z0-9äöüÄÖÜß_-]+/g, '-').replace(/^-+|-+$/g, '') || (item.kind === 'video' ? 'video' : 'bild');
+  res.download(file, `${base}-${stamp}-${item.id.slice(0, 5)}${path.extname(file).toLowerCase()}`);
 });
 
 app.get('/p/:id', (req, res) => {
-  const item = findPhoto(req.params.id);
+  const item = findShareable(req.params.id);
   const title = escapeHtml(db.settings.title);
+  const url = item && (item.asset ? `/assets/media/${encodeURIComponent(item.asset)}` : itemUrl(item.file));
+  const noun = !item || item.kind === 'photo' ? 'Foto' : item.kind === 'video' ? 'Video' : 'Bild';
+  const media = !item ? ''
+    : item.kind === 'video'
+      ? `<video class="dl-photo" src="${url}" controls playsinline preload="metadata"${item.thumb ? ` poster="${itemUrl(item.thumb)}"` : ''}></video>`
+      : `<img class="dl-photo" src="${url}" alt="${item.kind === 'photo' ? 'Dein Foto' : escapeHtml(item.title || 'Bild')}">`;
   const body = item
-    ? `<img class="dl-photo" src="${itemUrl(item.file)}" alt="Dein Foto">
-       <a class="btn primary big" href="/p/${item.id}/download" download>Foto herunterladen</a>
-       <p class="hint">Tipp: Du kannst das Bild auch lange gedrückt halten und „Speichern“ wählen.</p>`
-    : `<h2>Foto nicht gefunden</h2><p class="hint">Das Foto wurde gelöscht oder der Link ist nicht mehr gültig.</p>`;
+    ? `${item.title ? `<h2>${escapeHtml(item.title)}</h2>` : ''}${media}
+       <a class="btn primary big" href="/p/${item.id}/download" download>${noun} herunterladen</a>
+       <p class="hint">${item.kind === 'video' ? 'Tipp: Auf dem iPhone das Video öffnen, auf „Teilen“ tippen und „Video sichern“ wählen.' : 'Tipp: Du kannst das Bild auch lange gedrückt halten und „Speichern“ wählen.'}</p>`
+    : `<h2>Nicht gefunden</h2><p class="hint">Der Inhalt wurde gelöscht oder der Link ist nicht mehr gültig.</p>`;
   res.status(item ? 200 : 404).type('html').send(`<!doctype html>
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title>Dein Foto – ${title}</title><link rel="stylesheet" href="/css/style.css"></head>
+<meta name="robots" content="noindex"><title>${item && item.kind === 'photo' ? 'Dein Foto' : noun} – ${title}</title><link rel="stylesheet" href="/css/style.css"></head>
 <body class="download" style="--accent:${escapeHtml(db.settings.accent)}"><main class="dl-card"><h1>${title}</h1>${body}${logoUrl() ? `<img class="logo" src="${logoUrl()}" alt="">` : ''}</main></body></html>`);
 });
 
@@ -701,6 +730,7 @@ app.put('/api/admin/settings', requireAdmin, async (req, res) => {
     if (!list.some((b) => b.file === patch.background)) return res.status(400).json({ error: 'Hintergrund nicht gefunden' });
   }
   Object.assign(db.settings, patch);
+  settingsVersion = Date.now();
   save();
   broadcast('settings');
   res.json({ settings: db.settings });
@@ -817,7 +847,11 @@ app.post('/api/admin/command', requireAdmin, (req, res) => {
     broadcast('command', { action }, target === 'wall' ? ['wall'] : target === 'station' ? ['station'] : ['wall', 'station']);
   } else if (action === 'show' && db.items.some((i) => i.id === id && i.onWall)) {
     broadcast('command', { action, id }, ['wall']);
-  } else if (action === 'close') {
+  } else if (action === 'random') {
+    const list = db.items.filter((i) => i.onWall);
+    if (!list.length) return res.status(409).json({ error: 'Es ist noch nichts auf der Wall' });
+    broadcast('command', { action: 'show', id: list[crypto.randomInt(list.length)].id }, ['wall']);
+  } else if (action === 'close' || action === 'dvd' || action === 'wake') {
     broadcast('command', { action }, ['wall']);
   } else {
     return res.status(400).json({ error: 'Unbekannter Befehl' });
@@ -1278,8 +1312,60 @@ function gridCheck() {
 }
 
 /* ------------------------------------------------------------------ */
+/* QR-Codes im Browser erzeugen (Teilen-Dialog im Admin-Panel).       */
+/* Das Paket „qrcode“ wird beim ersten Abruf für den Browser gebündelt.*/
+/* ------------------------------------------------------------------ */
+let qrBundle = null;
+function buildQrBundle() {
+  const base = path.dirname(require.resolve('qrcode/package.json'));
+  const files = {};
+  const add = (abs) => {
+    if (files[abs]) return;
+    const src = fs.readFileSync(abs, 'utf8');
+    files[abs] = src;
+    for (const m of src.matchAll(/require\('([^']+)'\)/g)) {
+      add(m[1].startsWith('.') ? require.resolve(path.resolve(path.dirname(abs), m[1])) : require.resolve(m[1], { paths: [base] }));
+    }
+  };
+  const entries = [path.join(base, 'lib/core/qrcode.js'), path.join(base, 'lib/renderer/svg-tag.js')];
+  entries.forEach(add);
+  const ids = Object.keys(files);
+  const mods = ids.map((abs) => {
+    const deps = {};
+    for (const m of files[abs].matchAll(/require\('([^']+)'\)/g)) {
+      deps[m[1]] = ids.indexOf(m[1].startsWith('.') ? require.resolve(path.resolve(path.dirname(abs), m[1])) : require.resolve(m[1], { paths: [base] }));
+    }
+    return `[function (require, module, exports) {\n${files[abs]}\n}, ${JSON.stringify(deps)}]`;
+  });
+  return `/* qrcode ${require('qrcode/package.json').version} (MIT) – für den Browser gebündelt von server.js */
+(function () {
+  var mods = [${mods.join(',\n')}], cache = {};
+  function load(i) {
+    if (cache[i]) return cache[i].exports;
+    var m = cache[i] = { exports: {} };
+    mods[i][0](function (n) { return load(mods[i][1][n]); }, m, m.exports);
+    return m.exports;
+  }
+  var core = load(${ids.indexOf(entries[0])}), svg = load(${ids.indexOf(entries[1])});
+  window.QRLite = { svg: function (text, opts) { opts = opts || {}; return svg.render(core.create(text, { errorCorrectionLevel: opts.ecl || 'M' }), { margin: opts.margin == null ? 2 : opts.margin }); } };
+})();\n`;
+}
+app.get('/js/qrcode.js', (_req, res) => {
+  try { qrBundle = qrBundle || buildQrBundle(); } catch (e) { console.error('QR-Bündel:', e.message); return res.status(500).end(); }
+  res.type('application/javascript').set('Cache-Control', 'no-cache').send(qrBundle);
+});
+
+/* ------------------------------------------------------------------ */
 /* Besucher-App: Programm, Challenges, Shop, Feedback (lib/portal.js)  */
 /* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ */
+/* Paket teilen: alles als ZIP (lib/pack.js)                           */
+/* ------------------------------------------------------------------ */
+require('./lib/pack')({
+  app, requireGlobal, getDb: () => db, ROOT, UPLOADS, ASSETS,
+  startPasswordActive: () => !!startPassword, globalAdminName: () => globalAdmin().name,
+});
+
 require('./lib/portal')({
   app, express, getDb: () => db, settings: () => db.settings, save, broadcast, requireAdmin, isAdmin, clean, newId, sha,
   cookies, rateLimit, sameOrigin, publicBase, QRCode, escapeHtml, UPLOADS, contentType, page, ROOT, logoUrl,

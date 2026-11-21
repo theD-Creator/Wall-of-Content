@@ -332,6 +332,8 @@
     if (changed || !$('#frames').children.length) {
       frames = state.frames;
       renderFrames();
+      // alle Rahmen vorab laden, damit der Wechsel beim Antippen sofort sichtbar ist
+      for (const f of frames) { const img = new Image(); img.decoding = 'async'; img.src = f.url; }
     }
     layoutPreview();
     if (settings.stationsEnabled === false) { if (screen !== 'paused') show('paused'); }
@@ -343,5 +345,6 @@
     reconnect: () => loadState().catch(() => {}),
     command: (c) => { if (c.action === 'reload') location.reload(); },
   });
+  Fullscreen.install();
   loadState().catch(() => toast('Server nicht erreichbar'));
 })();

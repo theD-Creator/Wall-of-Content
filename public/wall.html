@@ -2,7 +2,10 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#000a3e">
   <title>Wall of Content</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
@@ -20,8 +23,15 @@
     <div class="viewer-frame">
       <div id="viewerMedia" class="viewer-media"></div>
       <div id="viewerTitle" class="viewer-title"></div>
+      <div id="viewerSpin" class="viewer-spin" hidden><div class="spinner"></div></div>
+      <div id="viewerMsg" class="viewer-msg" hidden></div>
+      <button id="viewerSound" class="viewer-sound" hidden>🔇 Tippen für Ton</button>
       <div class="viewer-progress"><i id="viewerBar"></i></div>
     </div>
+    <aside id="viewerQr" class="viewer-qr" hidden>
+      <img alt="QR-Code zum Mitnehmen">
+      <span>Scannen &amp; mitnehmen</span>
+    </aside>
     <button id="viewerClose" class="viewer-close" aria-label="Schließen">✕</button>
   </div>
   <aside id="board" class="board" hidden>
@@ -31,11 +41,11 @@
   <div class="qr-stack">
     <aside id="portalQr" class="hunt-qr portal-qr" hidden>
       <img alt="QR-Code zur Besucher-App">
-      <div><b>PROGRAMM &amp; CHALLENGES</b><span>Programm, Punkte sammeln, Merch &amp; Feedback</span></div>
+      <div><b>PROGRAMM</b><span>&amp; Challenges</span></div>
     </aside>
     <aside id="huntQr" class="hunt-qr" hidden>
       <img alt="QR-Code zum Color Hunt">
-      <div><b>COLOR HUNT</b><span>Scannen &amp; mitmachen!</span><span id="huntCountdown" class="hunt-countdown" hidden></span></div>
+      <div><b>COLOR HUNT</b><span>Mitmachen!</span><span id="huntCountdown" class="hunt-countdown" hidden></span></div>
     </aside>
   </div>
   <div id="huntFinal" class="hunt-final" hidden></div>
@@ -48,6 +58,11 @@
       <div class="winner-color"><i></i><span id="winnerColor"></span></div>
       <div id="winnerPhotos" class="winner-photos"></div>
     </div>
+  </div>
+
+  <!-- DVD-Logo-Bildschirmschoner -->
+  <div id="dvd" class="dvd" hidden>
+    <div id="dvdLogo" class="dvd-logo"><span>tecspaze</span></div>
   </div>
   <script src="/js/common.js"></script>
   <script src="/js/wall.js"></script>

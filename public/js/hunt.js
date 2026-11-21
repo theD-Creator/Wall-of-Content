@@ -227,5 +227,6 @@
     }
   }
   api('/api/state').then((s) => applyTheme(s.settings, null, null)).catch(() => {});
+  Fullscreen.install();
   load();
 })();

@@ -30,9 +30,10 @@ Für alle, die die Wall of Content betreiben, anpassen oder weiterentwickeln. Di
 | Pfad | Inhalt |
 |---|---|
 | `server.js` | Der Server: Einstellungen, Speicherung, Anmeldung, API-Routen, Color Hunt, Quiz, Verbund-Wall |
+| `lib/pack.js`, `lib/zip.js` | Paket teilen: komplette Wall of Content als ZIP (eigener ZIP-Schreiber mit ZIP64, ohne Zusatzpakete) |
 | `lib/portal.js` | Besucher-App: Besucherprofile, Live-Programm, Challenges, Merch-Shop mit Coupons, Feedback |
 | `public/` | Ausgelieferte Seiten: `wall.html`, `station.html`, `hunt.html`, `quiz.html`, `portal.html` (Besucher-App), `redeem.html` (Coupon einlösen), `admin.html` |
-| `public/js/` | `common.js` (gemeinsame Helfer), `qrscan.js` (QR-Scanner), `wall.js`, `station.js`, `hunt.js`, `quiz.js`, `portal.js`, `redeem.js`, `admin.js`, `admin-portal.js`, `print.js` |
+| `public/js/` | `common.js` (gemeinsame Helfer, Vollbild, Kopieren), `qrscan.js` (QR-Scanner), `wall.js`, `station.js`, `hunt.js`, `quiz.js`, `portal.js`, `redeem.js`, `admin.js`, `admin-portal.js`, `admin-show.js` (Show-Modus), `admin-pack.js` (Paket teilen), `admin-share.js` (Teilen-Dialog mit QR), `print.js` |
 | `public/css/style.css` | Ein gemeinsames Stylesheet für alle Seiten |
 | `assets/frames/` | Rahmen der Fotostation (werden automatisch erkannt) |
 | `assets/backgrounds/` | Hintergründe – Bilder oder Videos (MP4/WebM) |
@@ -208,6 +209,63 @@ Stornieren gibt Punkte und Bestand zurück.
 **Fotostation.** Das Foto wird im Browser zusammengesetzt: Bei deckenden Rahmen kommt das Kamerabild in das
 Fotofenster (Position in den Einstellungen), bei transparenten Rahmen liegt der Rahmen über dem Foto. Hochgeladen wird
 das fertige JPEG. Ohne Kamera-Freigabe wird die Kamera-App des Geräts über ein Datei-Eingabefeld verwendet.
+
+## Neu: Show-Modus, Teilen, Vorladen, Hitboxen, DVD-Logo
+
+### Paket teilen (`lib/pack.js`, `lib/zip.js`)
+
+| Methode | Pfad | Zweck |
+|---|---|---|
+| GET | `/api/admin/package/info` | Größen, Anzahl Inhalte/Fotos/Benutzer, Warnungen (Startpasswort aktiv, Benutzer ohne Passwort) – nur Global Admin |
+| GET | `/api/admin/package.zip?photos=1&node=1` | ZIP als Stream – nur Global Admin, immer nur ein Export gleichzeitig |
+| GET | `/js/qrcode.js` | Paket `qrcode`, beim ersten Abruf für den Browser gebündelt (`window.QRLite.svg()`, Teilen-Dialog) |
+
+Inhalt der ZIP (Ordner `Wall-of-Content/`): `server.js`, `package*.json`, `README.md`, `Start-Mac.command`, `lib/`,
+`public/`, `docs/`, `node_modules/` (inkl. `.woc-installed`, daher kein `npm ci`), `assets/`, `data/uploads/` und eine
+aufbereitete `data/db.json`; optional `.runtime/node/bin/node`. Ausgelassen: `admin-password.txt`, `https-*.pem`,
+`.DS_Store`, Symlinks. In der db.json wird `publicUrl` geleert; ohne Gäste-Fotos werden Foto-Einträge entfernt und
+Color-Hunt-Fotos geleert. Passwörter bleiben scrypt-Hashes (Salt + 32 Byte), daher gelten beim Empfänger dieselben
+Passwörter. Passt das mitgelieferte Node nicht zur Prozessor-Architektur, lädt `Start-Mac.command` das passende.
+
+`ZipWriter`: berechnet CRC32 (nativ `zlib.crc32` ab Node 22.2) und Größe vorab und schreibt keine Data-Descriptors
+(verträglich mit dem macOS-Archivprogramm); Textdateien und das Node-Programm werden asynchron im Thread-Pool
+komprimiert, Medien unkomprimiert gestreamt; ZIP64 automatisch über 4 GB; Unix-Rechte bleiben erhalten
+(`Start-Mac.command` ist nach dem Entpacken ausführbar). Getestet mit `unzip -t` und `ditto -x -k`, ZIP64 erzwungen.
+
+### Weitere Endpunkte und Einstellungen
+
+- `GET /api/items/:id/qr.svg` – QR-Code zur Download-Seite eines Inhalts (Viewer der Wall). `/p/:id` zeigt jetzt neben
+  Fotos auch Bilder/Videos, solange sie auf der Wall sind.
+- `POST /api/admin/command` kennt zusätzlich `random`, `dvd` und `wake`.
+- `GET /api/state` liefert `settingsVersion`; ändert sie sich, holt die Wall ihre QR-Codes neu.
+- Neue Einstellungen: `preloadMedia`, `qrSize` (50–200 %), `autoFullscreen`, `viewerQr`, `dvdMode`, `dvdCorners`,
+  `dvdIdle` (Minuten), `dvdSpeed`.
+
+### Wall: Videos, Vorladen, Hitboxen, DVD-Logo (`public/js/wall.js`)
+
+- **Videoplayer freigeben:** Entfernte Kacheln und geschlossene Viewer rufen `pause()`, entfernen `src` und `load()`.
+  Vorher blieben Player bis zur Speicherbereinigung bestehen; Chrome erlaubt nur begrenzt viele gleichzeitig (Android ~40),
+  danach starteten Videos nicht mehr.
+- **Viewer:** kein `backdrop-filter` mehr (wurde jedes Frame neu berechnet, während die Kacheln darunter liefen –
+  Videos ruckelten); die Physik pausiert, solange ein Inhalt offen ist. Fehler zeigen einen Hinweis statt sofort zu
+  schließen; vorgeladener Blob fällt bei Fehlern auf die Server-Adresse zurück; Autoplay ohne Ton → stumm + „Tippen für Ton“.
+- **Vorladen (`Preload`):** Bilder über `Image.decode()`, Videos bis zu einer Größengrenze als Blob im Speicher
+  (Budget nach `navigator.deviceMemory`, auf iPad/iPhone 160 MB), größere Videos puffern in einem versteckten
+  `<video preload="auto">`, das beim Öffnen direkt weiterverwendet wird. Sichtbare Kacheln zuerst, Bilder vor Videos;
+  während ein nicht vorgeladenes Video läuft, pausiert das Vorladen.
+- **Vorschaubilder:** Das Admin-Panel erzeugt fehlende Vorschaubilder (Video-Standbild per Canvas) automatisch.
+- **Hitboxen:** `measureObstacles()` misst Titel und Untertitel pro Textzeile (`Range.getClientRects()`, Höhe über
+  `measureText` auf die echte Schrift zugeschnitten) sowie QR-Kästen, Logo und Rangliste. Lücken zum Rand oder zwischen
+  Hindernissen, in die keine Kachel passt, werden mit gefüllt, damit nichts eingeklemmt wird. Hindernisse sind unbeweglich.
+- **DVD-Logo:** eigene Animationsschleife, die Wall-Physik ruht solange. Logo per CSS-`mask` eingefärbt. Ecken-Modus:
+  Jede Strecke von Ecke *i* zu Ecke *i+1* wird „aufgefaltet“ geplant (z. B. oben links → oben rechts: Δx = W, Δy = 2·m·H mit
+  m ∈ {1,2,3}); die Position ergibt sich durch Zurückfalten (Dreieckswelle), dadurch landet das Logo exakt in der Ecke.
+
+### Vollbild (`common.js`)
+
+`Fullscreen.install()` fügt auf allen Seiten außer Besucher-App, Download- und Teilen-Seite einen Knopf ein (nur wenn
+die Fullscreen-API vorhanden ist, auch `webkit`-Variante), Taste F schaltet um. `Fullscreen.auto()` fordert bei
+`autoFullscreen` beim ersten `pointerup` Vollbild an.
 
 ## Sicherheit
 

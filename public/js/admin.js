@@ -65,12 +65,18 @@
   });
 
   /* ---------------- Tabs ---------------- */
-  $('#tabs').addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-tab]');
+  function openTab(name) {
+    const btn = $(`#tabs button[data-tab="${name}"]`);
     if (!btn) return;
     for (const b of $$('#tabs button')) b.classList.toggle('active', b === btn);
-    for (const p of $$('.panel')) p.classList.toggle('active', p.dataset.panel === btn.dataset.tab);
+    for (const p of $$('.panel')) p.classList.toggle('active', p.dataset.panel === name);
+    try { localStorage.setItem('adminTab', name); } catch { /* egal */ }
+  }
+  $('#tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-tab]');
+    if (btn) openTab(btn.dataset.tab);
   });
+  try { const t = localStorage.getItem('adminTab'); if (t) openTab(t); } catch { /* egal */ }
 
   /* ---------------- Darstellung ---------------- */
   const fmtTime = (ts) => new Date(ts).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -146,7 +152,14 @@
             class: 'btn small', text: 'Jetzt zeigen',
             onclick: () => call('/api/admin/command', { method: 'POST', json: { action: 'show', id: item.id } }).then(() => toast('Wird auf der Wall gezeigt')),
           }),
-          isPhoto && el('a', { class: 'btn small', href: `/p/${item.id}`, target: '_blank', rel: 'noopener', text: 'Download-Seite' }),
+          (isPhoto || item.onWall) && el('button', {
+            class: 'btn small', text: '📤 Teilen', title: 'QR-Code und Link zur Download-Seite',
+            onclick: () => window.adminShare && window.adminShare.open({
+              title: isPhoto ? 'Foto teilen' : item.kind === 'video' ? 'Video teilen' : 'Bild teilen',
+              url: `${data.urls.download}/p/${item.id}`,
+              info: isPhoto ? 'Download-Seite des Fotos.' : 'Download-Seite – funktioniert, solange der Inhalt auf der Wall ist.',
+            }),
+          }),
           el('button', {
             class: 'btn small danger', text: 'Löschen',
             onclick: () => confirm('Wirklich löschen?') && call(`/api/admin/items/${item.id}`, { method: 'DELETE' }).then(load),
@@ -389,6 +402,7 @@
             e.preventDefault();
             try {
               await call(`/api/admin/users/${u.id}`, { method: 'PATCH', json: { password: pw.value } });
+              pw.value = '';
               pw.blur();
               toast(`Passwort für ${u.name} gespeichert`);
               load();
@@ -477,7 +491,7 @@
   }
 
   /** Erzeugt im Browser ein kleines Vorschaubild (JPEG) für Bild oder Video. */
-  async function makeThumb(file) {
+  async function makeThumb(file, kindHint) {
     const MAX = 560;
     const draw = (src, w, h) => {
       const k = Math.min(1, MAX / Math.max(w, h));
@@ -485,16 +499,20 @@
       canvas.getContext('2d').drawImage(src, 0, 0, canvas.width, canvas.height);
       return new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.8));
     };
-    const url = URL.createObjectURL(file);
+    const isUrl = typeof file === 'string';
+    const url = isUrl ? file : URL.createObjectURL(file);
+    const isVideo = isUrl ? kindHint === 'video' : file.type.startsWith('video/');
+    let video = null;
     try {
-      if (file.type.startsWith('video/')) {
-        const video = el('video', { muted: true, playsInline: true, preload: 'auto', src: url });
+      if (isVideo) {
+        video = el('video', { muted: true, playsInline: true, preload: 'auto', src: url });
         await new Promise((resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error('timeout')), 10000);
-          video.onloadeddata = () => { video.currentTime = Math.min(1, (video.duration || 2) / 2); };
+          const timer = setTimeout(() => reject(new Error('timeout')), 20000);
+          video.onloadedmetadata = () => { video.currentTime = Math.min(1, (Number.isFinite(video.duration) ? video.duration : 2) / 2); };
           video.onseeked = () => { clearTimeout(timer); resolve(); };
           video.onerror = () => { clearTimeout(timer); reject(new Error('video')); };
         });
+        if (!video.videoWidth) return null; // Format kann der Browser nicht dekodieren
         return await draw(video, video.videoWidth, video.videoHeight);
       }
       const img = new Image();
@@ -504,7 +522,8 @@
     } catch {
       return null;
     } finally {
-      URL.revokeObjectURL(url);
+      if (video) { video.pause(); video.removeAttribute('src'); video.load(); } // Player sofort freigeben
+      if (!isUrl) URL.revokeObjectURL(url);
     }
   }
 
@@ -556,12 +575,33 @@
       renderOverview(); renderItems(); renderAssets(); renderSettings(); renderHunt(); renderQuiz();
       for (const render of window.adminExtensions || []) render(data); // Programm, Challenges, Shop, Feedback (admin-portal.js)
       if (!($('#users').contains(document.activeElement) && document.activeElement.tagName === 'INPUT')) renderUsers(); // nicht beim Tippen überschreiben
+      ensureThumbs();
     }).catch(() => { loading = null; });
     return loading;
   }
 
-  // Schnittstelle für admin-portal.js
-  window.adminApi = { call, toast, load: () => load(), fmtTime };
+  /**
+   * Fehlende Vorschaubilder nachholen (z. B. für Dateien aus assets/media oder wenn es beim Upload nicht
+   * geklappt hat). Ohne Vorschaubild muss die Wall jedes Video als eigenen Player laden – das ist langsam
+   * und auf Tablets schnell zu viel.
+   */
+  const thumbTried = new Set();
+  let thumbRunning = false;
+  async function ensureThumbs() {
+    if (thumbRunning || !data) return;
+    thumbRunning = true;
+    try {
+      for (const item of data.items) {
+        if (item.thumb || item.kind === 'photo' || thumbTried.has(item.id)) continue;
+        thumbTried.add(item.id);
+        const blob = await makeThumb(item.url, item.kind);
+        if (blob) await api(`/api/admin/items/${item.id}/thumb`, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob }).catch(() => {});
+      }
+    } finally { thumbRunning = false; }
+  }
+
+  // Schnittstelle für admin-portal.js, admin-share.js, admin-show.js, admin-pack.js
+  window.adminApi = { call, toast, load: () => load(), fmtTime, data: () => data };
 
   async function start() {
     const me = await api('/api/admin/me');
@@ -571,6 +611,7 @@
     if (/^\/einloesen\/[A-Za-z0-9-]{1,20}$/.test(next)) { location.href = next; return; }
     $('#login').hidden = true;
     $('#app').hidden = false;
+    if (!$('#fsSlot .fs-btn')) Fullscreen.install($('#fsSlot'));
     await load();
     if (events) events.close();
     events = connectEvents('admin', 'Admin', {

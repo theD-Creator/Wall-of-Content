@@ -17,6 +17,10 @@ Diese Anleitung erklärt, wie du die Wall of Content startest, einrichtest und w
 11. [Einstellungen](#11-einstellungen)
 12. [Checkliste für den Veranstaltungstag](#12-checkliste-für-den-veranstaltungstag)
 13. [Probleme und Lösungen](#13-probleme-und-lösungen)
+14. [Show-Modus: alles Wichtige auf einen Blick](#14-show-modus-alles-wichtige-auf-einen-blick)
+15. [Paket teilen: alles in einer ZIP-Datei](#15-paket-teilen-alles-in-einer-zip-datei)
+16. [DVD-Logo (Bildschirmschoner)](#16-dvd-logo-bildschirmschoner)
+17. [Vollbild](#17-vollbild)
 
 ---
 
@@ -142,8 +146,8 @@ ADMIN_PASSWORD=neuesPasswort npm start
 
 ## 4. Die Wall
 
-Die Wall läuft im Browser auf dem großen Bildschirm. Mit der Taste **F** (oder Doppelklick auf den Hintergrund)
-geht sie in den Vollbildmodus.
+Die Wall läuft im Browser auf dem großen Bildschirm. Mit der Taste **F**, einem Doppelklick auf den Hintergrund
+oder dem **⛶**-Knopf oben links geht sie in den Vollbildmodus (siehe [Vollbild](#17-vollbild)).
 
 ![Die Wall](screenshots/wall.jpg)
 
@@ -151,10 +155,20 @@ geht sie in den Vollbildmodus.
 - **Nur wer auf eine Kachel tippt oder klickt**, öffnet das Bild bzw. Video. Von selbst öffnet sich nichts.
   Mit **„Jetzt zeigen“** im Admin-Panel kannst du einen Inhalt gezielt öffnen.
 - Neue Fotos von der Fotostation erscheinen sofort mit einer „NEU“-Animation.
+- **Titel, Untertitel, QR-Codes, Logo und Rangliste haben eine Hitbox:** Kacheln prallen daran ab und schieben sich nie
+  darunter. Beim Text zählt nur die tatsächliche Schrift (Zeile für Zeile), nicht der ganze Kopfbereich.
+- **Vorladen:** Bilder und Videos der Kacheln werden im Hintergrund geladen – beim Antippen starten sie sofort.
+  Abschaltbar im Show-Modus („Inhalte vorab laden“).
+- Ein geöffneter Inhalt zeigt unten rechts einen kleinen **QR-Code zum Mitnehmen** – Gäste scannen ihn und laden das
+  Bild/Video auf ihr Handy. Abschaltbar im Show-Modus.
+- Während ein Inhalt groß gezeigt wird, stehen die Kacheln dahinter still, damit Videos flüssig laufen.
+- Kann der Browser ein Video nicht abspielen (meist HEVC/H.265 aus dem iPhone), erscheint ein Hinweis statt eines
+  schwarzen Bildes. Videos am besten als **MP4 (H.264)** hochladen.
 
 ![Geöffneter Inhalt](screenshots/wall-geoeffnet.jpg)
 
-Läuft gerade ein Color Hunt, erscheint unten links ein QR-Code; ist die Quiz-Rangliste eingeschaltet, steht sie oben rechts:
+Läuft gerade ein Color Hunt, erscheint unten links ein kompakter QR-Code (mit Besucher-App-QR nebeneinander, Größe im
+Show-Modus unter „QR-Größe“ einstellbar); ist die Quiz-Rangliste eingeschaltet, steht sie oben rechts:
 
 ![Wall mit Color-Hunt-QR-Code und Quiz-Rangliste](screenshots/wall-qr-rangliste.jpg)
 
@@ -167,6 +181,9 @@ Läuft gerade ein Color Hunt, erscheint unten links ein QR-Code; ist die Quiz-Ra
 Im Tab **Inhalte** Dateien hineinziehen oder auswählen (JPG, PNG, WebP, GIF, MP4, WebM, MOV). Jede Kachel lässt sich
 ein-/ausblenden, betiteln, sofort zeigen oder löschen. Alternativ Dateien direkt in den Ordner `assets/media/` legen –
 sie erscheinen automatisch.
+
+Fehlende Vorschaubilder (z. B. für Dateien aus `assets/media/`) erzeugt das Admin-Panel automatisch, sobald es geöffnet
+ist. Mit **📤 Teilen** bekommst du für jeden Inhalt auf der Wall und jedes Foto einen QR-Code und Link zur Download-Seite.
 
 ![Inhalte](screenshots/admin-inhalte.jpg)
 
@@ -465,7 +482,7 @@ die Wall oder Stationen neu laden und einen geöffneten Inhalt auf der Wall schl
 
 1. Laptop ans Strom- und Event-WLAN, `npm start`.
 2. Im Admin-Panel anmelden, **Übersicht** öffnen.
-3. Wall auf dem großen Bildschirm öffnen, mit **F** in den Vollbildmodus.
+3. Wall auf dem großen Bildschirm öffnen, mit **F** in den Vollbildmodus. Im Tab **🎬 Show** prüfen: DVD-Logo an/aus, Tempo, QR-Größe.
 4. Fotostation-Handy: QR-Code scannen, Zertifikat bestätigen, Kamera erlauben, Probefoto machen.
 5. Quiz-iPad: Adresse öffnen (zeigt erst die Wall), Geführten Zugriff aktivieren.
 6. Optional Verbund-iPads mit ihren Positionen öffnen.
@@ -484,9 +501,92 @@ die Wall oder Stationen neu laden und einen geöffneten Inhalt auf der Wall schl
 | Fotostation zeigt keine Kamera | Adresse muss mit `https://` und Port `3443` beginnen; Zertifikatswarnung bestätigen; Kamera erlauben. Ohne Kamera-Freigabe öffnet der Auslöser die Kamera-App. |
 | QR-Code zum Download funktioniert nicht | Einstellungen → „Öffentliche Adresse für QR-Codes“ auf `http://<laptop-ip>:3000` setzen. |
 | Hintergrundvideo läuft nicht | MP4 (H.264) oder WebM verwenden; sehr große Dateien vorher verkleinern. |
+| Video auf der Wall startet nicht / Hinweis „lässt sich hier nicht abspielen“ | Meist HEVC/H.265 (iPhone-Standard) oder ein exotisches MOV. Als MP4 (H.264) exportieren, z. B. iPhone: Einstellungen → Kamera → Formate → „Maximale Kompatibilität“. |
+| Video startet stumm mit „Tippen für Ton“ | Browser erlauben Ton erst nach einer Berührung. Einmal auf die Wall tippen – danach läuft Ton (gilt bei „Jetzt zeigen“ aus dem Admin-Panel). |
+| Paket: Empfänger kann sich nicht anmelden | Es gelten dieselben Passwörter wie beim Original. Galt dort noch das Startpasswort, steht es nicht im Paket – vorher ändern. Notfalls beim Empfänger `ADMIN_PASSWORD=neuesPasswort npm start`. |
+| Paket: macOS blockiert Start-Mac.command | Wie beim ersten Start: Terminal öffnen, `bash ` tippen, Datei hineinziehen, Enter ([MAC.md](MAC.md)). |
+| Paket: QR-Codes zeigen beim Empfänger auf die falsche Adresse | Die öffentliche Adresse wird im Paket geleert und automatisch neu ermittelt; sonst unter Einstellungen neu setzen. |
+| Kein ⛶-Knopf zu sehen | Der Browser kann kein Vollbild (z. B. iPhone-Safari). Seite über „Teilen → Zum Home-Bildschirm“ hinzufügen – dann startet sie ohne Browserleiste. |
 | Ein Gast hat seine Punkte „verloren“ | Anderer Browser oder Daten gelöscht? Mit dem Besucher-Code (Challenges → „Dein Besucher-Code“) wiederherstellen. |
 | Scanner in der Besucher-App zeigt kein Livebild | Normal über `http://` – „Foto vom QR-Code machen“ oder die Kamera-App des Handys nutzen. |
 | Coupon lässt sich nicht einlösen | Nur angemeldete Team-Mitglieder können einlösen; „Bereits eingelöst“ heißt: der Coupon wurde schon verwendet. |
 | Benutzer kann sich nicht anmelden | David R. muss im Tab **Benutzer** zuerst ein Passwort festlegen. |
 | Passwort vergessen | Server mit `ADMIN_PASSWORD=neuesPasswort npm start` starten (gilt für den Global Admin). |
 | Alles zurücksetzen | Server stoppen, Ordner `data/` sichern und dann löschen, neu starten. |
+
+---
+
+## 14. Show-Modus: alles Wichtige auf einen Blick
+
+Der Tab **🎬 Show** ist der erste Tab im Admin-Panel und für die laufende Veranstaltung gedacht. **Jede Änderung wirkt
+sofort** – kein Speichern-Knopf nötig (ein kurzes grünes Aufleuchten bestätigt es).
+
+| Bereich | Was geht |
+|---|---|
+| Live-Steuerung | Zufälligen Inhalt auf der Wall zeigen, Anzeige schließen, DVD-Logo sofort starten, Wall aufwecken, Wall/Stationen neu laden |
+| Aktionen | Fotostationen, Color Hunt, Quiz, Quiz-Rangliste, QR-Code der Besucher-App, QR zum Mitnehmen, Freigabe-Pflicht – jeweils ein Schalter |
+| Wall | Titel, Untertitel, Akzentfarbe, Tempo, Kachelgröße, Anzahl Kacheln, Anzeigedauer, QR-Größe, Ton, Vorladen |
+| DVD-Logo | Bildschirmschoner an/aus, Ecken-Modus, Wartezeit, Tempo |
+| Vollbild | „Vollbild beim ersten Antippen“ für Wall, Station, Quiz und Color Hunt |
+
+Das Admin-Panel merkt sich den zuletzt geöffneten Tab.
+
+---
+
+## 15. Paket teilen: alles in einer ZIP-Datei
+
+Mit **📦 Paket teilen** (Tab im Admin-Panel, nur für den Global Admin) gibst du die **komplette Wall of Content** weiter –
+z. B. an ein anderes Team oder auf einen Ersatz-Laptop. Wer den Ordner öffnet, hat sofort alles: Inhalte, Fotos, Rahmen,
+Hintergründe, Logo, Einstellungen, Benutzer mit ihren Passwörtern, Color Hunt, Quiz und die Besucher-App mit Programm,
+Challenges, Shop und Feedback.
+
+1. Tab **📦 Paket teilen** öffnen. Oben siehst du, was mitkommt und wie groß das Paket ungefähr wird.
+2. Optional: **Fotos der Gäste mitnehmen** (Fotostation, Color Hunt) und **Node.js mitliefern** abwählen.
+   Mit Node.js braucht der Empfänger kein Internet.
+3. **„Paket erstellen & herunterladen“** – du bekommst `Wall-of-Content-<Datum>.zip`.
+4. Weitergeben per AirDrop, USB-Stick oder Cloud.
+5. Der Empfänger entpackt die ZIP (Doppelklick), öffnet den Ordner **Wall-of-Content** und doppelklickt
+   **Start-Mac.command**. Anmeldung im Admin-Panel mit **denselben Benutzern und Passwörtern** wie bei dir.
+
+**Was ist mit den Passwörtern?**
+
+- Die Passwörter der Admin-Benutzer liegen nur als **scrypt-Hash** im Paket. Sie funktionieren beim Empfänger genauso,
+  lassen sich aus den Dateien aber nicht zurückrechnen.
+- **Nicht im Paket:** das Startpasswort im Klartext (`admin-password.txt`), der private HTTPS-Schlüssel und das Zertifikat
+  (werden auf dem neuen Rechner neu erzeugt) und angemeldete Sitzungen.
+- Gilt für den Global Admin noch das Startpasswort, warnt der Tab: vorher unter „Einstellungen → Mein Passwort ändern“
+  ein eigenes Passwort setzen, sonst kann sich beim Empfänger niemand als Global Admin anmelden.
+- Die **öffentliche Adresse für QR-Codes** wird geleert, weil sie zum alten Netzwerk gehört.
+- Das Paket enthält Fotos und Daten der Gäste – nur an Leute weitergeben, die die Wall betreiben sollen.
+
+**Inhalte einzeln teilen:** Bei Bildern, Videos und Fotos gibt es im Admin-Panel **📤 Teilen** (QR-Code und Link zur
+Download-Seite).
+
+---
+
+## 16. DVD-Logo (Bildschirmschoner)
+
+Wird die Wall eine Weile nicht benutzt, fliegt das **tecspaze-Logo** wie beim alten DVD-Player über einen schwarzen
+Bildschirm und wechselt bei jedem Aufprall die Farbe. Eine Berührung, ein neuer Inhalt oder der Color-Hunt-Schlussspurt
+beendet es sofort.
+
+- Einschalten im Show-Modus: **„Bei Inaktivität zeigen“**, Wartezeit 0,5 bis 30 Minuten, Tempo einstellbar.
+- **Ecken-Modus:** Das Logo trifft garantiert **alle vier Ecken nacheinander** – oben links → oben rechts → unten rechts →
+  unten links → … Jede Strecke wird so berechnet, dass das Logo nach 1 bis 5 Abprallern genau in der nächsten Ecke
+  landet. Jeder Eckentreffer blitzt kurz auf.
+- Ohne Ecken-Modus fliegt es klassisch im 45°-Winkel; Ecken werden dann nur zufällig getroffen.
+- **„DVD-Logo jetzt“** im Show-Modus startet es sofort (zum Testen), **„Wall aufwecken“** beendet es.
+
+Als Logo wird `assets/logo.svg` (bzw. `.png`/`.webp`) verwendet und einfarbig eingefärbt.
+
+---
+
+## 17. Vollbild
+
+Wall, Fotostation, Quiz, Color Hunt, Coupon-Einlöseseite und Admin-Panel haben einen **⛶**-Knopf (Wall: oben links,
+Station/Quiz/Color Hunt: unten links, Admin: oben im Kopf). Auf Wall, Station, Quiz und Color Hunt schaltet auch die
+Taste **F** um. Die Besucher-App hat bewusst keinen Vollbild-Knopf.
+
+Mit **„Vollbild beim ersten Antippen“** (Show-Modus) gehen Wall, Station, Quiz und Color Hunt bei der ersten Berührung
+automatisch in den Vollbildmodus – Browser erlauben das nicht ohne Berührung. Auf dem iPhone gibt es keinen Vollbildmodus
+im Browser; dort die Seite zum Home-Bildschirm hinzufügen.

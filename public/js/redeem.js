@@ -45,5 +45,6 @@
       } else fail(err.message);
     }
   }
+  Fullscreen.install();
   load();
 })();

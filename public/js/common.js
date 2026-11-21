@@ -51,9 +51,77 @@ function connectEvents(role, name, handlers, extra = {}) {
   return es;
 }
 
+/** Text in die Zwischenablage – auch ohne HTTPS (dort fehlt navigator.clipboard). */
+async function copyText(text, input) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+  } catch { /* Fallback unten */ }
+  const ta = input || el('textarea', { value: text, readOnly: true, style: 'position:fixed;left:-9999px;top:0' });
+  const tmp = !input;
+  const wasPw = ta.type === 'password';
+  if (tmp) document.body.append(ta);
+  if (wasPw) ta.type = 'text';
+  ta.focus(); ta.select();
+  try { ta.setSelectionRange(0, text.length); } catch { /* egal */ }
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { /* nicht möglich */ }
+  if (wasPw) ta.type = 'password';
+  if (tmp) ta.remove();
+  else ta.blur();
+  return ok;
+}
+
+/* ---------------- Vollbild (alle Geräte außer Besucher-App) ---------------- */
+const Fullscreen = {
+  supported: () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
+  active: () => !!(document.fullscreenElement || document.webkitFullscreenElement),
+  enter() {
+    const root = document.documentElement;
+    const req = root.requestFullscreen || root.webkitRequestFullscreen;
+    if (!req) return;
+    try { const p = req.call(root, { navigationUI: 'hide' }); if (p && p.catch) p.catch(() => {}); } catch { /* abgelehnt */ }
+  },
+  exit() {
+    const fn = document.exitFullscreen || document.webkitExitFullscreen;
+    if (fn) try { const p = fn.call(document); if (p && p.catch) p.catch(() => {}); } catch { /* egal */ }
+  },
+  toggle() { if (Fullscreen.active()) Fullscreen.exit(); else Fullscreen.enter(); },
+  /** Knopf einbauen; `auto` = beim ersten Antippen automatisch in den Vollbildmodus. */
+  install(target) {
+    const b = document.body;
+    if (!b || b.classList.contains('portal') || (b.classList.contains('download') && !b.classList.contains('redeem')) || window.top !== window || !Fullscreen.supported()) return null;
+    const btn = el('button', { type: 'button', class: 'fs-btn', title: 'Vollbild (Taste F)', 'aria-label': 'Vollbild umschalten', onclick: () => Fullscreen.toggle() });
+    const update = () => {
+      const on = Fullscreen.active();
+      btn.textContent = on ? '⤡' : '⛶';
+      btn.title = on ? 'Vollbild beenden (Taste F)' : 'Vollbild (Taste F)';
+      b.classList.toggle('is-fullscreen', on);
+    };
+    for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, update);
+    update();
+    (target || b).append(btn);
+    if (!b.classList.contains('admin')) {
+      addEventListener('keydown', (e) => {
+        if ((e.key === 'f' || e.key === 'F') && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) Fullscreen.toggle();
+      });
+    }
+    return btn;
+  },
+  /** Beim ersten Antippen Vollbild anfordern (Browser erlauben es nur nach einer Berührung). */
+  auto(enabled) {
+    Fullscreen.autoOn = !!enabled;
+    if (Fullscreen.autoBound) return;
+    Fullscreen.autoBound = true;
+    addEventListener('pointerup', () => {
+      if (Fullscreen.autoOn && !Fullscreen.active() && Fullscreen.supported() && window.top === window && !document.body.classList.contains('admin')) Fullscreen.enter();
+    }, { passive: true });
+  },
+};
+
 function applyTheme(settings, backgroundUrl, logoUrl) {
   for (const img of $$('img.logo')) { img.hidden = !logoUrl; if (logoUrl) img.src = logoUrl; }
   document.documentElement.style.setProperty('--accent', settings.accent || '#7c5cff');
+  if ('autoFullscreen' in settings) Fullscreen.auto(settings.autoFullscreen);
   const bg = $('#bg');
   if (!bg) return;
   const isVideo = /\.(mp4|webm)$/i.test(backgroundUrl || '');

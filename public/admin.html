@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0e0e19">
   <title>Admin – Wall of Content</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
@@ -21,7 +24,8 @@
     <header class="admin-head">
       <img class="logo admin-logo" src="/assets/logo.svg" alt=""><strong>Wall of Content</strong>
       <nav id="tabs" class="tabs">
-        <button data-tab="overview" class="active">Übersicht</button>
+        <button data-tab="show" class="active">🎬 Show</button>
+        <button data-tab="overview">Übersicht</button>
         <button data-tab="media">Inhalte</button>
         <button data-tab="photos">Fotos <span id="pendingBadge" class="badge" hidden></span></button>
         <button data-tab="hunt">Color Hunt <span id="huntBadge" class="badge" hidden></span></button>
@@ -32,15 +36,73 @@
         <button data-tab="feedback">Feedback <span id="fbBadge" class="badge" hidden></span></button>
         <button data-tab="frames">Rahmen</button>
         <button data-tab="backgrounds">Hintergründe</button>
+        <button data-tab="pack">📦 Paket teilen</button>
         <button data-tab="users">Benutzer</button>
         <button data-tab="settings">Einstellungen</button>
       </nav>
       <span id="meChip" class="me-chip"></span>
+      <span id="fsSlot"></span>
       <button id="logout" class="btn ghost small">Abmelden</button>
     </header>
 
     <main>
-      <section data-panel="overview" class="panel active">
+      <!-- ===================== Show-Modus ===================== -->
+      <section data-panel="show" class="panel active">
+        <div class="card show-card">
+          <h2>🎬 Live-Steuerung der Wall</h2>
+          <div class="show-big">
+            <button class="btn" data-show-cmd="random"><span>🎲</span>Zufälligen Inhalt zeigen</button>
+            <button class="btn" data-show-cmd="close"><span>✕</span>Anzeige schließen</button>
+            <button class="btn" data-show-cmd="dvd"><span>📀</span>DVD-Logo jetzt</button>
+            <button class="btn" data-show-cmd="wake"><span>☀️</span>Wall aufwecken</button>
+            <button class="btn" data-show-cmd="reload" data-target="wall"><span>↻</span>Wall neu laden</button>
+            <button class="btn" data-show-cmd="reload" data-target="station"><span>↻</span>Stationen neu laden</button>
+          </div>
+        </div>
+        <div class="show-grid">
+          <div class="card show-card">
+            <h2>⚡ Aktionen</h2>
+            <div class="show-row"><span>Fotostationen aktiv</span><label class="switch"><input type="checkbox" data-show="stationsEnabled"><span></span></label></div>
+            <div class="show-row"><span>Color Hunt geöffnet</span><label class="switch"><input type="checkbox" data-show-special="hunt"><span></span></label></div>
+            <div class="show-row"><span>Quiz gestartet</span><label class="switch"><input type="checkbox" data-show-special="quiz"><span></span></label></div>
+            <div class="show-row"><span>Quiz-Rangliste auf der Wall</span><label class="switch"><input type="checkbox" data-show-special="board"><span></span></label></div>
+            <div class="show-row"><span>QR-Code Besucher-App auf der Wall</span><label class="switch"><input type="checkbox" data-show="portalQr"><span></span></label></div>
+            <div class="show-row"><span>QR-Code zum Mitnehmen im Viewer</span><label class="switch"><input type="checkbox" data-show="viewerQr"><span></span></label></div>
+            <div class="show-row"><span>Fotos erst nach Freigabe</span><label class="switch"><input type="checkbox" data-show="moderation"><span></span></label></div>
+          </div>
+          <div class="card show-card">
+            <h2>🖼️ Wall</h2>
+            <label class="show-row"><span>Titel</span><input data-show="title" maxlength="80"></label>
+            <label class="show-row"><span>Untertitel</span><input data-show="subtitle" maxlength="160"></label>
+            <label class="show-row"><span>Akzentfarbe</span><input type="color" data-show="accent"></label>
+            <label class="show-row"><span>Tempo</span><input type="range" min="0" max="5" step="0.1" data-show="speed" data-unit="×"><output></output></label>
+            <label class="show-row"><span>Kachelgröße</span><input type="range" min="80" max="480" step="10" data-show="thumbSize" data-unit=" px"><output></output></label>
+            <label class="show-row"><span>Kacheln</span><input type="range" min="1" max="120" step="1" data-show="wallMaxItems"><output></output></label>
+            <label class="show-row"><span>Bilder zeigen</span><input type="range" min="2" max="60" step="1" data-show="imageDuration" data-unit=" s"><output></output></label>
+            <label class="show-row"><span>QR-Größe</span><input type="range" min="50" max="200" step="5" data-show="qrSize" data-unit=" %"><output></output></label>
+            <div class="show-row"><span>Videos mit Ton</span><label class="switch"><input type="checkbox" data-show="videoSound"><span></span></label></div>
+            <div class="show-row"><span>Inhalte vorab laden</span><label class="switch"><input type="checkbox" data-show="preloadMedia"><span></span></label></div>
+            <p class="show-hint">Vorladen: Bilder und Videos der Wall werden im Hintergrund geladen und starten beim Antippen sofort.</p>
+          </div>
+          <div class="card show-card">
+            <h2>📀 DVD-Logo</h2>
+            <div class="show-row"><span>Bei Inaktivität zeigen</span><label class="switch"><input type="checkbox" data-show="dvdMode"><span></span></label></div>
+            <div class="show-row"><span>Ecken-Modus</span><label class="switch"><input type="checkbox" data-show="dvdCorners"><span></span></label></div>
+            <p class="show-hint">Ecken-Modus: Das Logo trifft garantiert alle 4 Ecken hintereinander (oben links → oben rechts → unten rechts → unten links).</p>
+            <label class="show-row"><span>Nach Inaktivität</span><input type="range" min="0.5" max="30" step="0.5" data-show="dvdIdle" data-unit=" min"><output></output></label>
+            <label class="show-row"><span>Tempo</span><input type="range" min="0.2" max="5" step="0.1" data-show="dvdSpeed" data-unit="×"><output></output></label>
+            <p class="show-hint">Inaktiv heißt: niemand hat die Wall berührt, nichts wird gezeigt und es kam kein neuer Inhalt. Jede Berührung beendet das DVD-Logo.</p>
+          </div>
+          <div class="card show-card">
+            <h2>⛶ Vollbild</h2>
+            <div class="show-row"><span>Vollbild beim ersten Antippen</span><label class="switch"><input type="checkbox" data-show="autoFullscreen"><span></span></label></div>
+            <p class="show-hint">Gilt für Wall, Fotostation, Quiz und Color Hunt. Browser erlauben Vollbild nur nach einer Berührung – danach bleibt es an.
+              Jede Seite (außer der Besucher-App) hat außerdem einen ⛶-Knopf; an der Wall auch Taste F oder Doppelklick.</p>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="overview" class="panel">
         <div class="cards" id="stats"></div>
         <div class="grid2">
           <div class="card">
@@ -148,6 +210,37 @@
           <div class="row"><button class="btn primary">Speichern</button><button type="button" id="questionCancel" class="btn ghost" hidden>Abbrechen</button></div>
         </form>
         <div id="questions" class="questions"></div>
+      </section>
+
+      <!-- ===================== Paket teilen ===================== -->
+      <section data-panel="pack" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>📦 Paket teilen</h2>
+            <p>Erstellt eine ZIP-Datei mit der <b>kompletten Wall of Content</b>: App, alle Inhalte, Rahmen, Hintergründe, Logo,
+              Einstellungen, Benutzer mit Passwörtern, Color Hunt, Quiz, Besucher-App (Programm, Challenges, Shop, Feedback).</p>
+            <p class="muted small">Weitergeben per AirDrop, USB-Stick oder Cloud. Der Empfänger entpackt die ZIP, öffnet den Ordner
+              „Wall-of-Content“ und doppelklickt <code>Start-Mac.command</code> – alles ist sofort drin, Anmeldung mit denselben Passwörtern.</p>
+            <div id="packInfo" class="pack-info"></div>
+            <div class="show-row"><span>Fotos der Gäste mitnehmen</span><label class="switch"><input id="packPhotos" type="checkbox" checked><span></span></label></div>
+            <p class="show-hint">Fotostation und Color Hunt. Ohne Haken bleiben nur deine eigenen Inhalte drin.</p>
+            <div class="show-row"><span>Node.js mitliefern (offline startklar)</span><label class="switch"><input id="packNode" type="checkbox" checked><span></span></label></div>
+            <p class="show-hint">Dann braucht der Empfänger kein Internet. Passt das mitgelieferte Node nicht zu seinem Mac, wird automatisch das richtige geladen.</p>
+            <div id="packWarn"></div>
+            <a id="packBtn" class="btn primary big" href="/api/admin/package.zip">📦 Paket erstellen &amp; herunterladen</a>
+          </div>
+          <div class="card">
+            <h2>🛡️ Was ist mit den Passwörtern?</h2>
+            <ul class="pack-list">
+              <li><b>Admin-Passwörter</b> liegen nur als <b>scrypt-Hash</b> im Paket – sie funktionieren beim Empfänger genauso,
+                lassen sich aus den Dateien aber nicht zurückrechnen.</li>
+              <li><b>Nicht im Paket:</b> das Startpasswort im Klartext (<code>admin-password.txt</code>), der private HTTPS-Schlüssel
+                und das Zertifikat (werden auf dem neuen Rechner neu erzeugt), angemeldete Sitzungen.</li>
+              <li>Die <b>öffentliche Adresse für QR-Codes</b> wird geleert – sie gehört zum alten Netzwerk.</li>
+              <li>Gib das Paket nur an Leute, die die Wall betreiben sollen: Es enthält Fotos und Daten der Gäste.</li>
+            </ul>
+          </div>
+        </div>
       </section>
 
       <section data-panel="users" class="panel">
@@ -387,10 +480,28 @@
       </section>
     </main>
   </div>
+  <dialog id="shareDlg" class="dlg">
+    <div class="dlg-body">
+      <h2 id="sdTitle">Teilen</h2>
+      <div id="sdQr" class="dlg-qr"></div>
+      <div class="row"><input id="sdUrl" readonly class="mono"><button type="button" id="sdCopy" class="btn small primary">Kopieren</button></div>
+      <p id="sdInfo" class="muted small"></p>
+      <div class="row wrap">
+        <button type="button" id="sdNative" class="btn small" hidden>📤 Teilen …</button>
+        <a id="sdOpen" class="btn small" target="_blank" rel="noopener">Öffnen ↗</a>
+        <span style="flex:1"></span>
+        <button type="button" id="sdClose" class="btn small ghost">Schließen</button>
+      </div>
+    </div>
+  </dialog>
   <div id="toast" class="toast" hidden></div>
   <script src="/js/common.js"></script>
   <script src="/js/qrscan.js"></script>
+  <script src="/js/qrcode.js"></script>
   <script src="/js/admin.js"></script>
   <script src="/js/admin-portal.js"></script>
+  <script src="/js/admin-share.js"></script>
+  <script src="/js/admin-show.js"></script>
+  <script src="/js/admin-pack.js"></script>
 </body>
 </html>

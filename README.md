@@ -79,6 +79,12 @@ Fotos der Stationen, Uploads aus dem Admin-Panel und die Einstellungen liegen in
 
 ## Admin-Panel
 
+- **🎬 Show:** die wichtigsten Schalter für die laufende Veranstaltung, jede Änderung wirkt sofort – Live-Steuerung der Wall,
+  Color Hunt/Quiz/Stationen an/aus, Tempo, Kachelgröße, QR-Größe, Vorladen, DVD-Logo, Vollbild.
+- **📦 Paket teilen:** die komplette Wall of Content als ZIP – App, alle Inhalte, Fotos, Einstellungen, Benutzer mit
+  Passwörtern, Color Hunt, Quiz, Besucher-App. Empfänger entpackt, doppelklickt `Start-Mac.command`, alles ist drin.
+  Passwörter nur als scrypt-Hash, kein Klartext, kein privater Schlüssel. Inhalte und Fotos lassen sich außerdem per
+  **📤 Teilen** als QR-Code weitergeben.
 - **Übersicht:** Adressen mit QR-Codes, verbundene Geräte, Fotostationen pausieren, Wall/Stationen neu laden.
 - **Inhalte:** Bilder und Videos hochladen, ein-/ausblenden, betiteln, „Jetzt zeigen“ auf der Wall.
 - **Fotos:** Alle Stations-Fotos; freigeben, von der Wall nehmen, löschen. Fotos ohne Zustimmung des Gastes
@@ -104,3 +110,16 @@ Einstellungen die „Öffentliche Adresse für QR-Codes“ setzen, z. B. `http:/
 
 Ohne HTTPS (oder wenn die Kamera nicht freigegeben wird) nutzt die Fotostation automatisch die
 Kamera-App des Handys als Ersatz.
+
+## Neu
+
+- **Videos laufen zuverlässig:** Videoplayer werden freigegeben, Vorschaubilder automatisch erzeugt, die Wall pausiert
+  während der Wiedergabe, nicht abspielbare Formate zeigen einen Hinweis.
+- **Paket teilen:** komplette Wall of Content inklusive aller Inhalte und Passwörter (als Hash) als startklare ZIP.
+- **Vorladen:** Bilder und Videos der Wall werden im Hintergrund geladen und starten beim Antippen sofort.
+- **Hitboxen:** Kacheln prallen exakt an Titel-Schrift, QR-Codes, Logo und Rangliste ab.
+- **Kompakte QR-Codes** auf der Wall (nebeneinander, Größe einstellbar) und ein QR-Code zum Mitnehmen im Viewer.
+- **DVD-Logo** als Bildschirmschoner bei Inaktivität – mit Ecken-Modus, der garantiert alle 4 Ecken nacheinander trifft.
+- **Vollbild-Knopf** auf allen Geräten außer der Besucher-App.
+
+Details: [Anleitung, Kapitel 14–17](docs/ANLEITUNG.md#14-show-modus-alles-wichtige-auf-einen-blick).

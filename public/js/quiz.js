@@ -177,6 +177,7 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
   addEventListener('pointerdown', () => { if (!wakeLock || wakeLock.released) keepAwake(); }, { passive: true });
 
+  Fullscreen.install();
   theme();
   show('wall');
   load();
