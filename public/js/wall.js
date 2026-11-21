@@ -165,7 +165,7 @@
   })();
 
   function preloadVisible() {
-    if (gridMode) return Preload.want(items.slice(0, settings.wallMaxItems || 36));
+    if (gridMode || layout) return Preload.want(items.slice(0, settings.wallMaxItems || 36));
     const visible = [...bubbles.values()].map((b) => b.item);
     const rest = items.filter((i) => !bubbles.has(i.id));
     Preload.want([...visible, ...rest]);
@@ -452,11 +452,39 @@
   }
 
   let lastT = performance.now();
+  /* ---------------- Neues Design: Bühne / Mosaik (public/js/wall-layouts.js) ---------------- */
+  let layout = null;
+  let layoutKind = '';
+  let program = [];
+  let serverOffset = 0;
+  function applyLayout() {
+    const design = applyDesign(settings);
+    const kind = gridMode || design !== 'neu' || !window.WallLayouts ? '' : (settings.wallLayout || 'buehne');
+    if (kind !== layoutKind) {
+      if (layout) { layout.destroy(); layout = null; }
+      layoutKind = kind;
+      document.body.classList.toggle('layout-on', !!kind);
+      if (kind) {
+        for (const b of bubbles.values()) { releaseMedia(b.el); b.el.remove(); }
+        bubbles.clear();
+        layout = WallLayouts.mount(kind, $('#layout'), { open: (item) => openViewer(item), now: () => Date.now() + serverOffset });
+        layout.settings(settings, program, logoUrl);
+        layout.update(items, {});
+        if (current) layout.pause(true);
+      } else if (loaded) {
+        sync().catch(() => {}); // zurück zu den schwebenden Kacheln
+      }
+      return;
+    }
+    if (layout) layout.settings(settings, program, logoUrl);
+  }
+
   function tick(now) {
     requestAnimationFrame(tick);
     const elapsed = Math.min(0.1, (now - lastT) / 1000);
     lastT = now;
     if (dvd.on) { dvdFrame(elapsed); return; } // Wall ist verdeckt: Physik ruht
+    if (layout) return; // Bühne/Mosaik animieren selbst
     // Während ein Inhalt groß gezeigt wird, steht die Wall still: Video bekommt die volle Leistung
     if (current && viewer.classList.contains('open') && now - openedAt > 500) return;
     if (gridMode) { renderGrid(now); return; }
@@ -499,6 +527,17 @@
       preloadVisible();
       return;
     }
+    if (layout) {
+      if (current && !byId.has(current.id)) closeViewer();
+      const fresh = loaded ? items.filter((i) => !known.has(i.id)).map((i) => i.id) : [];
+      if (highlightId && byId.has(highlightId) && !fresh.includes(highlightId)) fresh.push(highlightId);
+      if (fresh.length) activity(); // neuer Inhalt weckt die Wall auf
+      layout.update(items, { fresh });
+      $('#empty').hidden = items.length > 0;
+      loaded = true;
+      preloadVisible();
+      return;
+    }
 
     for (const [id, b] of bubbles) {
       const item = byId.get(id);
@@ -528,7 +567,7 @@
 
   // Wenn es mehr Inhalte als Plätze gibt: regelmäßig eine Kachel austauschen (öffnet nichts)
   setInterval(() => {
-    if (gridMode || current || dvd.on || items.length <= bubbles.size || !bubbles.size) return;
+    if (gridMode || layout || current || dvd.on || items.length <= bubbles.size || !bubbles.size) return;
     const hidden = items.filter((i) => !bubbles.has(i.id));
     if (!hidden.length) return;
     const next = hidden[Math.floor(Math.random() * hidden.length)];
@@ -564,6 +603,9 @@
     portal.hidden = !settings.portalQr;
     if (prev.dvdMode && !settings.dvdMode && dvd.on && !dvd.manual) stopDvd();
     if (dvd.on) dvdPrepare();
+    program = state.program || [];
+    if (state.now) serverOffset = state.now - Date.now();
+    applyLayout();
     measureObstacles();
   }
 
@@ -584,6 +626,7 @@
   function openViewer(item) {
     activity();
     closeViewer(true);
+    if (layout) layout.pause(true); // Bühne/Mosaik halten an, solange der Inhalt groß gezeigt wird
     current = item;
     openedAt = performance.now();
     viewerMedia.replaceChildren();
@@ -658,6 +701,7 @@
     clearTimeout(closeTimer);
     if (!current) return;
     current = null;
+    if (layout) layout.pause(false);
     activity();
     const video = $('video', viewerMedia);
     if (video) {
@@ -955,6 +999,7 @@
     items: (d) => refresh(d.added),
     settings: () => refresh(),
     hunt: () => loadState().catch(() => {}),
+    program: () => loadState().catch(() => {}),
     reconnect: () => refresh(),
     command: (c) => {
       if (c.action === 'reload') location.reload();

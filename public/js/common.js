@@ -118,6 +118,19 @@ const Fullscreen = {
   },
 };
 
+/**
+ * Design „neu“ oder „klassisch“ setzen (Einstellung im Admin-Panel). Per Adresse erzwingbar: ?design=klassisch
+ * design.js setzt es schon im <head>, damit nichts flackert; hier wird es mit den Einstellungen abgeglichen.
+ */
+function applyDesign(settings) {
+  const root = document.documentElement;
+  if (root.dataset.designForced) return root.dataset.design;
+  const d = settings && settings.design === 'klassisch' ? 'klassisch' : 'neu';
+  root.dataset.design = d;
+  try { localStorage.setItem('wocDesign', d); } catch { /* egal */ }
+  return d;
+}
+
 function applyTheme(settings, backgroundUrl, logoUrl) {
   for (const img of $$('img.logo')) { img.hidden = !logoUrl; if (logoUrl) img.src = logoUrl; }
   document.documentElement.style.setProperty('--accent', settings.accent || '#7c5cff');

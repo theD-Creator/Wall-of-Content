@@ -100,6 +100,11 @@ const SETTINGS = {
   dvdCorners: { type: 'bool', def: false },
   dvdIdle: { type: 'num', min: 0.5, max: 120, def: 5 },
   dvdSpeed: { type: 'num', min: 0.2, max: 5, def: 1 },
+  // Design: „neu“ (Bühne/Mosaik, neues Admin-Panel) oder „klassisch“ (schwebende Kacheln, bisheriges Aussehen)
+  design: { type: 'enum', values: ['neu', 'klassisch'], def: 'neu' },
+  wallLayout: { type: 'enum', values: ['buehne', 'mosaik', 'wechsel'], def: 'buehne' },
+  stageSeconds: { type: 'int', min: 4, max: 60, def: 9 },
+  layoutMinutes: { type: 'int', min: 1, max: 60, def: 4 },
 };
 const newId = () => crypto.randomBytes(9).toString('base64url');
 let settingsVersion = Date.now(); // ändert sich bei jeder Einstellungsänderung (Wall holt dann z. B. QR-Codes neu)
@@ -467,7 +472,24 @@ app.get('/api/state', async (_req, res) => {
     quiz: { active: db.quiz.active, board: db.quiz.showBoard ? quizBoard(10) : null },
     backgroundUrl: bg ? bg.url : null,
     frames: frames.filter((f) => f.enabled).map(({ file, url, name }) => ({ file, url, name })),
+    // Live-Programm für das Band auf der Wall (dieselben Daten wie in der Besucher-App)
+    program: ((db.portal && db.portal.program) || []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map(({ id, title, start, end, highlight }) => ({ id, title, start, end, highlight })),
+    now: Date.now(),
   });
+});
+
+// Schriften für das neue Design (lokal ausgeliefert, funktioniert auch ohne Internet)
+const FONT_FILES = {
+  'outfit-latin.woff2': '@fontsource-variable/outfit/files/outfit-latin-wght-normal.woff2',
+  'outfit-latin-ext.woff2': '@fontsource-variable/outfit/files/outfit-latin-ext-wght-normal.woff2',
+  'dm-sans-latin.woff2': '@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2',
+  'dm-sans-latin-ext.woff2': '@fontsource-variable/dm-sans/files/dm-sans-latin-ext-wght-normal.woff2',
+};
+app.get('/vendor/fonts/:file', (req, res) => {
+  const rel = FONT_FILES[req.params.file];
+  if (!rel) return res.status(404).end();
+  res.set('Cache-Control', 'public, max-age=604800').sendFile(path.join(ROOT, 'node_modules', rel));
 });
 
 function logoUrl() {

@@ -115,7 +115,20 @@ Danach wieder `npm start`.
 
 Öffne `http://localhost:3000/admin`, tippe auf dein Profilbild und gib dein Passwort ein.
 
-![Anmeldung mit Benutzerauswahl](screenshots/admin-login.jpg)
+| Anmeldung (Design „Neu“) | Anmeldung (Design „Klassisch“) |
+|---|---|
+| ![Anmeldung neu](screenshots/admin-neu-login.jpg) | ![Anmeldung klassisch](screenshots/admin-login.jpg) |
+
+**Aufbau im neuen Design:** Links die Seitenleiste mit den Bereichen **Live** (Show, Übersicht), **Inhalte**,
+**Mitmachen** (Color Hunt, Quiz, Programm, Challenges, Shop, Feedback), **Gestaltung** und **System**; rechts der
+gewählte Bereich mit großer Überschrift. Oben rechts öffnet **„Wall öffnen ↗“** die Wall in einem neuen Tab.
+Auf dem Handy wird die Seitenleiste zu einer Leiste oben zum Wischen.
+
+![Show-Modus im neuen Design](screenshots/admin-neu-show.jpg)
+
+| Übersicht | Handy |
+|---|---|
+| ![Übersicht](screenshots/admin-neu-uebersicht.jpg) | ![Handy](screenshots/admin-neu-handy.jpg) |
 
 Es gibt fünf Benutzer:
 
@@ -148,6 +161,50 @@ ADMIN_PASSWORD=neuesPasswort npm start
 
 Die Wall läuft im Browser auf dem großen Bildschirm. Mit der Taste **F**, einem Doppelklick auf den Hintergrund
 oder dem **⛶**-Knopf oben links geht sie in den Vollbildmodus (siehe [Vollbild](#17-vollbild)).
+
+### Zwei Designs: „Neu“ und „Klassisch“
+
+Unter **Einstellungen → Design** (oder im **Show-Modus**) wählst du das Design. Es gilt sofort für die Wall und das
+Admin-Panel – niemand muss etwas neu laden.
+
+| Design | Wall | Admin-Panel |
+|---|---|---|
+| **✨ Neu** (Standard) | **Bühne**, **Mosaik** oder beides im Wechsel | hell, Seitenleiste mit Bereichen, große Überschriften |
+| **Klassisch** | schwebende Kacheln wie bisher | dunkel, Reiter oben – wie bisher |
+
+Einzelne Geräte kannst du per Adresse umschalten, egal was eingestellt ist: `http://<laptop-ip>:3000/?design=klassisch`
+bzw. `?design=neu` (geht auch beim Admin-Panel: `/admin?design=klassisch`).
+
+Schriften im neuen Design: **Outfit** (fette Überschriften) und **DM Sans** (Text). Sie sind in der App enthalten und
+funktionieren auch ohne Internet.
+
+### Neues Design: Bühne
+
+![Wall im Layout „Bühne“](screenshots/wall-buehne.jpg)
+
+- **In der Mitte die Bühne:** ein Inhalt groß, alle paar Sekunden wechselt er sanft zum nächsten (einstellbar unter
+  „Bühne wechselt alle“). Videos laufen stumm durch. **Antippen** öffnet den Inhalt groß – mit Ton.
+- **Rechts „Neueste Inhalte“:** die sechs neuesten Bilder, Videos und Fotos. Ein neues Foto von der Fotostation springt
+  sofort auf die Bühne und bekommt ein grünes **„Neu“**.
+- **Unten das Band:** was laut Programm **jetzt live** läuft und was **gleich** kommt, rechts daneben die QR-Codes
+  (Besucher-App, Color Hunt). Ohne Programm steht dort „Mach mit: Fotostation · Color Hunt · Challenges“.
+- Oben Titel, Untertitel, Logo und Uhrzeit.
+
+### Neues Design: Mosaik
+
+![Wall im Layout „Mosaik“](screenshots/wall-mosaik.jpg)
+
+- Der ganze Bildschirm ist ein Raster aus großen und kleinen Kacheln. Alle drei Sekunden tauscht eine Kachel sanft ihren
+  Inhalt, gut eine Minute später ordnet sich das Raster neu.
+- Neue Fotos landen in den großen Kacheln und blinken kurz grün.
+- Titel oben links, „Jetzt live / Gleich“ unten links, QR-Codes unten rechts. Antippen öffnet groß.
+
+**Bühne ⇄ Mosaik im Wechsel:** wechselt automatisch zwischen beiden Layouts (Standard alle 4 Minuten, einstellbar).
+
+Auch im neuen Design gilt: Ein Inhalt öffnet sich **groß über der Wall nur durch Antippen** oder per „Jetzt zeigen“ /
+„Zufälligen Inhalt zeigen“ im Admin-Panel – die Bühne und das Mosaik wechseln nur innerhalb ihrer Fläche.
+
+### Klassisches Design: schwebende Kacheln
 
 ![Die Wall](screenshots/wall.jpg)
 

@@ -34,7 +34,8 @@ Für alle, die die Wall of Content betreiben, anpassen oder weiterentwickeln. Di
 | `lib/portal.js` | Besucher-App: Besucherprofile, Live-Programm, Challenges, Merch-Shop mit Coupons, Feedback |
 | `public/` | Ausgelieferte Seiten: `wall.html`, `station.html`, `hunt.html`, `quiz.html`, `portal.html` (Besucher-App), `redeem.html` (Coupon einlösen), `admin.html` |
 | `public/js/` | `common.js` (gemeinsame Helfer, Vollbild, Kopieren), `qrscan.js` (QR-Scanner), `wall.js`, `station.js`, `hunt.js`, `quiz.js`, `portal.js`, `redeem.js`, `admin.js`, `admin-portal.js`, `admin-show.js` (Show-Modus), `admin-pack.js` (Paket teilen), `admin-share.js` (Teilen-Dialog mit QR), `print.js` |
-| `public/css/style.css` | Ein gemeinsames Stylesheet für alle Seiten |
+| `public/css/style.css` | Gemeinsames Stylesheet für alle Seiten (klassisches Design) |
+| `public/css/neu.css` | Design „neu“ für Wall und Admin-Panel (greift nur bei `<html data-design="neu">`), Schriften Outfit + DM Sans |
 | `assets/frames/` | Rahmen der Fotostation (werden automatisch erkannt) |
 | `assets/backgrounds/` | Hintergründe – Bilder oder Videos (MP4/WebM) |
 | `assets/media/` | Bilder/Videos, die automatisch auf der Wall erscheinen (Ordner wird überwacht) |
@@ -205,6 +206,19 @@ Stornieren gibt Punkte und Bestand zurück.
 
 **Feedback.** Gespeichert werden nur Bewertung, Text, Zeit und ein Hash des Besucherprofils (damit jedes Gerät eine
 änderbare Bewertung hat) – keine Namen. Der CSV-Export schützt vor Formeln in Excel.
+
+**Designs.** Die Einstellung `design` (`neu` | `klassisch`) steht in `/api/state`. `public/js/design.js` setzt
+`data-design` schon im `<head>` (zuletzt gesehener Wert aus `localStorage` bzw. `?design=` in der Adresse),
+`applyDesign()` in `common.js` gleicht ihn mit den Einstellungen ab. `neu.css` greift nur bei `data-design="neu"`,
+dadurch bleibt das klassische Aussehen unverändert. Die Schriften kommen aus `@fontsource-variable/outfit` und
+`@fontsource-variable/dm-sans` und werden lokal unter `/vendor/fonts/…` ausgeliefert.
+
+**Wall-Layouts** (`public/js/wall-layouts.js`). Im Design „neu“ übergibt `wall.js` die Inhalte an ein Layout
+(`wallLayout`: `buehne`, `mosaik`, `wechsel`) statt an die Physik. Ein Layout bekommt `update(items, {fresh})`,
+`settings(settings, program, logo)`, `pause(on)` (während der Viewer offen ist) und `destroy()`. Viewer, Sieger,
+Countdown, Rangliste, QR-Codes und DVD-Logo bleiben in `wall.js` und liegen über dem Layout. Das Programm-Band nutzt
+`program` aus `/api/state`; Änderungen kommen per Live-Ereignis `program`. Die Verbund-Wall (`?pos=`) nutzt immer die
+schwebenden Kacheln.
 
 **Fotostation.** Das Foto wird im Browser zusammengesetzt: Bei deckenden Rahmen kommt das Kamerabild in das
 Fotofenster (Position in den Einstellungen), bei transparenten Rahmen liegt der Rahmen über dem Foto. Hochgeladen wird

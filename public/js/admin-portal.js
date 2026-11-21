@@ -6,9 +6,12 @@
 
   // Validierte Farben (Kontrast auf der dunklen Kartenfläche geprüft):
   // eine Serie = Akzentfarbe; geordnete Stufen (Bewertung 1–5, Anzahl Stationen) = eine Farbe von dunkel nach hell
-  const SERIES = '#e10b70';
-  const RAMP = ['#8f2a5d', '#b02f6a', '#d33a7d', '#ef6a9f', '#fca5c6'];
-  const rampAt = (t) => `color-mix(in oklch, ${RAMP[0]} ${Math.round((1 - t) * 100)}%, ${RAMP[4]})`;
+  // Farben kommen aus dem Design (neu.css: --chart-*); Standard = klassisches dunkles Design
+  const cssVar = (name, fallback) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  const RAMP_DARK = ['#8f2a5d', '#b02f6a', '#d33a7d', '#ef6a9f', '#fca5c6'];
+  const series = () => cssVar('--chart-series', '#e10b70');
+  const ramp = () => RAMP_DARK.map((c, i) => cssVar(`--chart-ramp-${i + 1}`, c));
+  const rampAt = (t) => { const r = ramp(); return `color-mix(in oklch, ${r[0]} ${Math.round((1 - t) * 100)}%, ${r[4]})`; };
   const SMILEYS = ['', '😖', '🙁', '😐', '🙂', '😍'];
   const RATING = ['', 'Sehr schlecht', 'Schlecht', 'Okay', 'Gut', 'Sehr gut'];
 
@@ -215,7 +218,7 @@
 
     hbars($('#chartStations'), stations.map((s) => {
       const n = st.stationVisits[s.id] || 0;
-      return { label: s.name, value: n, color: SERIES, tip: `${s.name}: ${n} Besucher` };
+      return { label: s.name, value: n, color: series(), tip: `${s.name}: ${n} Besucher` };
     }), 'Noch keine Besuche.');
     const n = stations.length;
     hbars($('#chartProgress'), Array.from({ length: n }, (_, k) => k + 1).reverse().map((k) => ({
@@ -374,7 +377,7 @@
     hbars($('#chartRatings'), [5, 4, 3, 2, 1].map((r) => {
       const n = st.ratings[r - 1];
       const pct = st.count ? Math.round(n / st.count * 100) : 0;
-      return { label: `${SMILEYS[r]} ${RATING[r]}`, value: n, color: RAMP[r - 1], tip: `${RATING[r]}: ${n} (${pct} %)` };
+      return { label: `${SMILEYS[r]} ${RATING[r]}`, value: n, color: ramp()[r - 1], tip: `${RATING[r]}: ${n} (${pct} %)` };
     }), 'Noch kein Feedback.');
 
     const sort = $('#fbSort').value;

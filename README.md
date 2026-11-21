@@ -1,5 +1,9 @@
 # Wall of Content
 
+✨ **Zwei Designs:** „Neu“ (Wall als **Bühne** oder **Mosaik**, helles Admin-Panel mit Seitenleiste, Schriften Outfit +
+DM Sans) und „Klassisch“ (schwebende Kacheln, dunkles Admin-Panel). Umschalten unter Einstellungen → Design oder pro
+Gerät mit `?design=klassisch`.
+
 📖 **Dokumentation**
 
 - [Anleitung mit Screenshots](docs/ANLEITUNG.md) – Bedienung von Wall, Fotostation, Color Hunt, Quiz, Besucher-App und Admin-Panel
