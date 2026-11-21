@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#000a3e">
+  <title>Fotostation</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/neu.css">
+  <script src="/js/design.js"></script>
+</head>
+<body class="station">
+  <div id="bg" class="wall-bg"></div>
+
+  <!-- 1: Start -->
+  <section class="screen active" data-screen="start">
+    <div class="start-box">
+      <div class="camera-icon" aria-hidden="true">📸</div>
+      <p id="stationSub" class="kicker"></p>
+      <h1 id="stationTitle">Fotostation</h1>
+      <button id="startBtn" class="btn primary huge">Start</button>
+    </div>
+    <img class="logo station-logo" alt="" hidden>
+    <div id="stationName" class="station-name"></div>
+  </section>
+
+  <!-- 2: Rahmen wählen & aufnehmen -->
+  <section class="screen" data-screen="shoot">
+    <header class="bar">
+      <button class="btn ghost" data-action="home">✕ Abbrechen</button>
+      <span class="bar-title">Wähle deinen Rahmen</span>
+      <button id="switchCam" class="btn ghost" hidden aria-label="Kamera wechseln">⟲ Kamera</button>
+    </header>
+    <div class="preview-wrap">
+      <div id="preview" class="preview">
+        <img id="frameOverlay" class="frame-overlay" alt="">
+        <video id="video" playsinline muted autoplay></video>
+        <div id="camError" class="cam-error" hidden></div>
+        <div id="count" class="count" hidden></div>
+        <div id="flash" class="flash"></div>
+      </div>
+    </div>
+    <div id="frames" class="frames" role="listbox" aria-label="Rahmen"></div>
+    <div class="shoot-row">
+      <button id="shootBtn" class="shutter" aria-label="Foto aufnehmen"><i></i></button>
+    </div>
+    <input id="fileInput" type="file" accept="image/*" capture="user" hidden>
+  </section>
+
+  <!-- 3: Kontrolle -->
+  <section class="screen" data-screen="review">
+    <header class="bar"><span class="bar-title">Gefällt dir dein Foto?</span></header>
+    <div class="preview-wrap"><img id="result" class="result" alt="Dein Foto"></div>
+    <label class="check">
+      <input id="share" type="checkbox">
+      <span class="check-box" aria-hidden="true"></span>
+      <span>Mein Foto auf der <b>Wall of Content</b> anzeigen</span>
+    </label>
+    <div class="row">
+      <button id="retakeBtn" class="btn big">↺ Nochmal</button>
+      <button id="saveBtn" class="btn primary big">Speichern ✓</button>
+    </div>
+  </section>
+
+  <!-- 4: QR-Code -->
+  <section class="screen" data-screen="qr">
+    <div class="qr-box">
+      <h2>Dein Foto ist fertig!</h2>
+      <p class="muted">Scanne den QR-Code mit deinem Handy, um das Foto herunterzuladen.</p>
+      <div class="qr-row">
+        <img id="qrPhoto" class="qr-photo" alt="">
+        <img id="qrImg" class="qr" alt="QR-Code zum Download">
+      </div>
+      <p id="qrNote" class="note"></p>
+      <button id="doneBtn" class="btn primary big">Fertig</button>
+      <p class="muted small">Zurück zum Start in <span id="qrLeft"></span> s</p>
+    </div>
+  </section>
+
+  <!-- Pausiert -->
+  <section class="screen" data-screen="paused">
+    <div class="start-box"><div class="camera-icon">⏸</div><h1>Fotostation pausiert</h1><p class="muted">Gleich geht es weiter.</p></div>
+  </section>
+
+  <div id="busy" class="busy" hidden><div class="spinner"></div><p id="busyText">Wird gespeichert …</p></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/station.js"></script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000a3e">
+  <meta name="robots" content="noindex">
+  <title>Color Hunt</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/neu.css">
+  <script src="/js/design.js"></script>
+</head>
+<body class="hunt station">
+  <div id="bg" class="wall-bg"></div>
+
+  <section class="screen active" data-screen="loading">
+    <div class="hunt-box"><div class="spinner" style="margin:auto"></div></div>
+  </section>
+
+  <section class="screen" data-screen="closed">
+    <div class="hunt-box">
+      <h1 class="rainbow">Color Hunt</h1>
+      <p id="closedText" class="muted">Der Color Hunt ist gerade nicht geöffnet. Schau später nochmal vorbei!</p>
+      <button class="btn big" data-action="reload">Nochmal prüfen</button>
+    </div>
+  </section>
+
+  <!-- 1: Name -->
+  <section class="screen" data-screen="name">
+    <form id="joinForm" class="hunt-box">
+      <p id="eventTitle" class="kicker"></p>
+      <h1 class="rainbow">Color Hunt</h1>
+      <p class="muted">Gib deinen Namen ein – dann bekommst du deine Farbe.</p>
+      <p class="hunt-ends" data-ends hidden></p>
+      <input id="name" maxlength="30" autocomplete="nickname" placeholder="Dein Name" required>
+      <button class="btn primary big">Mitmachen</button>
+      <p id="joinError" class="error"></p>
+      <p class="muted small">Jede Person kann nur einmal mitmachen.</p>
+    </form>
+  </section>
+
+  <!-- 2: Farbe -->
+  <section class="screen" data-screen="color">
+    <div class="color-reveal">
+      <p class="small-title">Hallo <span data-bind="name"></span>, deine Farbe ist</p>
+      <p class="big-color" data-bind="color"></p>
+      <button class="btn big" data-go="guide">Weiter zur Anleitung</button>
+    </div>
+  </section>
+
+  <!-- 3: Anleitung -->
+  <section class="screen" data-screen="guide">
+    <div class="hunt-box">
+      <h1>So geht's</h1>
+      <ol class="steps">
+        <li><span>Suche <b data-bind="count"></b> Dinge in deiner Farbe <b data-bind="color"></b>.</span></li>
+        <li><span>Tippe auf ein leeres Feld, um ein Foto zu machen. Du kannst ein Foto durch erneutes Antippen ersetzen.</span></li>
+        <li><span>Du hast <b data-bind="minutes"></b> Minuten Zeit. Die Zeit startet, sobald du auf „Start“ tippst.</span></li>
+        <li><span>Wenn alle Fotos fertig sind, tippe auf „Abgeben“. Läuft die Zeit ab, wird automatisch abgegeben.</span></li>
+        <li><span>Du kannst nur einmal mitmachen. Der Sieger wird auf der Wall of Content gezeigt!</span></li>
+      </ol>
+      <p class="hunt-ends" data-ends hidden></p>
+      <button id="startBtn" class="btn primary big">Start – die Zeit läuft!</button>
+    </div>
+  </section>
+
+  <!-- 4: Jagd -->
+  <section class="screen" data-screen="hunt">
+    <div class="hunt-bar">
+      <span>Finde: <span data-bind="color"></span></span>
+      <span id="timer" class="timer">0:00</span>
+    </div>
+    <p class="hunt-ends" data-ends hidden></p>
+    <div id="slots" class="slots"></div>
+    <button id="finishBtn" class="btn primary big" style="width:100%;max-width:30rem;flex:none">Abgeben</button>
+    <p id="progress" class="muted small" style="margin:0"></p>
+    <input id="camera" type="file" accept="image/*" capture="environment" hidden>
+  </section>
+
+  <!-- 5: Fertig -->
+  <section class="screen" data-screen="done">
+    <div class="hunt-box">
+      <div class="camera-icon">🎉</div>
+      <h1>Danke, <span data-bind="name"></span>!</h1>
+      <p class="muted">Deine Fotos sind abgegeben. Schau auf die Wall of Content – dort wird der Sieger gezeigt.</p>
+      <div id="donePhotos" class="hunt-done-photos"></div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="/js/common.js"></script>
+  <script src="/js/hunt.js"></script>
+</body>
+</html>
