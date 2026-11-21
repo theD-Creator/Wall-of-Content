@@ -831,14 +831,42 @@
       dvd.logo.style.webkitMaskImage = dvd.logo.style.maskImage = `url("${logoUrl}")`;
       if (dvd.ratioUrl !== logoUrl) {
         dvd.ratioUrl = logoUrl;
+        dvd.crop = null;
         const img = new Image();
-        img.onload = () => { if (img.naturalWidth && img.naturalHeight) { dvd.ratio = img.naturalWidth / img.naturalHeight; dvdResize(); } };
+        img.onload = () => {
+          if (!img.naturalWidth || !img.naturalHeight) return;
+          dvd.crop = dvdBounds(img);
+          const c = dvd.crop;
+          dvd.ratio = (img.naturalWidth * c.w) / (img.naturalHeight * c.h);
+          dvdResize();
+        };
         img.src = logoUrl;
       }
     } else {
       dvd.logo.classList.remove('masked');
     }
     dvdResize();
+  }
+  /**
+   * Sichtbarer Bereich des Logos (ohne durchsichtigen Rand) als Anteil 0–1. Viele Logo-Dateien haben leeren Rand –
+   * ohne diese Korrektur prallt das Logo sichtbar zu früh ab und trifft die Ecken nicht.
+   */
+  function dvdBounds(img) {
+    const full = { x: 0, y: 0, w: 1, h: 1 };
+    try {
+      const W = 600, H = Math.max(1, Math.round(600 * img.naturalHeight / img.naturalWidth));
+      const cv = document.createElement('canvas');
+      cv.width = W; cv.height = H;
+      const g = cv.getContext('2d', { willReadFrequently: true });
+      g.drawImage(img, 0, 0, W, H);
+      const a = g.getImageData(0, 0, W, H).data;
+      let x0 = W, y0 = H, x1 = -1, y1 = -1;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        if (a[(y * W + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      }
+      if (x1 < 0) return full;
+      return { x: x0 / W, y: y0 / H, w: (x1 - x0 + 1) / W, h: (y1 - y0 + 1) / H };
+    } catch { return full; }
   }
   function dvdResize() {
     const W = innerWidth, H = innerHeight;
@@ -847,6 +875,16 @@
     dvd.h = dvd.logo.classList.contains('masked') ? w / dvd.ratio : dvd.logo.getBoundingClientRect().height || w / 4;
     dvd.logo.style.width = w + 'px';
     dvd.logo.style.height = dvd.logo.classList.contains('masked') ? dvd.h + 'px' : '';
+    const c = dvd.logo.classList.contains('masked') && dvd.crop;
+    if (c) {
+      // Maske so vergrößern/verschieben, dass der sichtbare Teil genau die Box füllt
+      const mw = dvd.w / c.w, mh = dvd.h / c.h;
+      dvd.logo.style.webkitMaskSize = dvd.logo.style.maskSize = `${mw}px ${mh}px`;
+      dvd.logo.style.webkitMaskPosition = dvd.logo.style.maskPosition = `${-c.x * mw}px ${-c.y * mh}px`;
+    } else {
+      dvd.logo.style.webkitMaskSize = dvd.logo.style.maskSize = '';
+      dvd.logo.style.webkitMaskPosition = dvd.logo.style.maskPosition = '';
+    }
     dvd.x = Math.min(Math.max(0, dvd.x), W - dvd.w);
     dvd.y = Math.min(Math.max(0, dvd.y), H - dvd.h);
     if (dvd.on && settings.dvdCorners) dvdLeg(true);

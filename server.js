@@ -592,8 +592,8 @@ app.get('/p/:id', (req, res) => {
        <p class="hint">${item.kind === 'video' ? 'Tipp: Auf dem iPhone das Video öffnen, auf „Teilen“ tippen und „Video sichern“ wählen.' : 'Tipp: Du kannst das Bild auch lange gedrückt halten und „Speichern“ wählen.'}</p>`
     : `<h2>Nicht gefunden</h2><p class="hint">Der Inhalt wurde gelöscht oder der Link ist nicht mehr gültig.</p>`;
   res.status(item ? 200 : 404).type('html').send(`<!doctype html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title>${item && item.kind === 'photo' ? 'Dein Foto' : noun} – ${title}</title><link rel="stylesheet" href="/css/style.css"></head>
+<html lang="de" data-design="${db.settings.design === 'klassisch' ? 'klassisch' : 'neu'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>${item && item.kind === 'photo' ? 'Dein Foto' : noun} – ${title}</title><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/neu.css"></head>
 <body class="download" style="--accent:${escapeHtml(db.settings.accent)}"><main class="dl-card"><h1>${title}</h1>${body}${logoUrl() ? `<img class="logo" src="${logoUrl()}" alt="">` : ''}</main></body></html>`);
 });
 

@@ -708,12 +708,10 @@ body.admin .fs-btn { position: static; opacity: .8; width: 2.2rem; height: 2.2re
 .dvd { position: fixed; inset: 0; z-index: 45; background: #000; opacity: 0; transition: opacity .4s; overflow: hidden; cursor: none; }
 .dvd.open { opacity: 1; }
 .dvd-logo { --dvd: #fff; position: absolute; left: 0; top: 0; will-change: transform; display: grid; place-items: center; }
-.dvd-logo span { font-weight: 900; font-size: clamp(2rem, 6vw, 5rem); letter-spacing: .04em; color: var(--dvd); white-space: nowrap; }
+.dvd-logo span { font-weight: 900; font-size: clamp(2rem, 6vw, 5rem); line-height: .8; letter-spacing: .04em; color: var(--dvd); white-space: nowrap; }
 .dvd-logo.masked { background: var(--dvd); -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat; }
 .dvd-logo.masked span { display: none; }
-.dvd.corner { animation: dvd-corner .9s ease-out; }
-.dvd.corner .dvd-logo { filter: drop-shadow(0 0 30px var(--dvd)); }
-@keyframes dvd-corner { 0% { background: #fff3; } 100% { background: #000; } }
+/* Ecke getroffen: nur das Logo wechselt die Farbe – der Bildschirm leuchtet nicht auf */
 
 /* ============================ ADMIN: Teilen-Dialog & Paket ============================ */
 .dlg { border: 1px solid var(--line); padding: 0; background: var(--panel); color: var(--text); border-radius: 18px; width: min(94vw, 30rem); max-height: 92vh; }
@@ -747,3 +745,4 @@ body.admin .fs-btn { position: static; opacity: .8; width: 2.2rem; height: 2.2re
 .show-card h2 { display: flex; align-items: center; gap: .5rem; }
 .saved-flash { animation: saved 1s ease-out; }
 @keyframes saved { 0% { box-shadow: 0 0 0 2px var(--ok); } 100% { box-shadow: 0 0 0 2px transparent; } }
+.shop-grid > .p-empty, .shop-grid > .muted, .shop-grid > p { grid-column: 1 / -1; }

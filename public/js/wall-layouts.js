@@ -28,6 +28,41 @@
     if (item.kind === 'video' && !item.thumb) return el('video', { src: item.url + '#t=0.5', muted: true, playsInline: true, preload: 'metadata' });
     return el('img', { src: full && item.kind !== 'video' ? item.url : (item.thumb || item.url), alt: '', draggable: false, decoding: 'async' });
   }
+  /** Natürliche Größe eines Bildes/Videos, sobald bekannt. */
+  function whenSized(m, fn) {
+    const go = () => { const w = m.naturalWidth || m.videoWidth, h = m.naturalHeight || m.videoHeight; if (w && h) fn(w, h); };
+    if (m.tagName === 'IMG') { if (m.complete) go(); else m.addEventListener('load', go, { once: true }); }
+    else if (m.readyState >= 1) go(); else m.addEventListener('loadedmetadata', go, { once: true });
+  }
+  /**
+   * Kleine Dateien nicht riesig aufblasen: höchstens auf das `max`-fache ihrer echten Größe.
+   * Große Dateien passen sich ganz normal ein (object-fit: contain).
+   */
+  function capUpscale(m, box, max = 2) {
+    whenSized(m, (w, h) => {
+      const s = Math.min(box.clientWidth / w, box.clientHeight / h);
+      if (!(s > max)) return;
+      m.classList.add('capped');
+      m.style.width = Math.round(w * max) + 'px';
+      m.style.height = Math.round(h * max) + 'px';
+    });
+  }
+  /** Platz für die QR-Codes im Band reservieren (die liegen als eigene Elemente darüber). */
+  function reserveQr(root) {
+    const qrStack = document.querySelector('.qr-stack');
+    const measure = () => {
+      const r = qrStack && qrStack.getBoundingClientRect();
+      root.style.setProperty('--qr-w', r && r.width ? r.width + 'px' : '0px');
+      root.style.setProperty('--qr-h', r && r.height ? r.height + 'px' : '0px');
+    };
+    const ro = qrStack && new ResizeObserver(measure);
+    if (ro) ro.observe(qrStack);
+    measure();
+    return { measure, stop: () => ro && ro.disconnect() };
+  }
+  /** Hoch- oder Querformat (iPad hochkant, Handy) – die Layouts ordnen sich danach an. */
+  const isPortrait = () => innerWidth / innerHeight < 1.05;
+
   /** Videos sauber stoppen, damit kein Download weiterläuft. */
   function release(node) {
     for (const v of node.querySelectorAll('video')) { v.pause(); v.removeAttribute('src'); v.load(); }
@@ -83,16 +118,23 @@
     let settings = {};
     let program = [];
 
-    // Platz für die QR-Codes im Band reservieren (die liegen als eigene Elemente darüber)
-    const qrStack = document.querySelector('.qr-stack');
-    const measure = () => {
-      const r = qrStack && qrStack.getBoundingClientRect();
-      root.style.setProperty('--qr-w', r && r.width ? r.width + 'px' : '0px');
-      root.style.setProperty('--qr-h', r && r.height ? r.height + 'px' : '0px');
-    };
-    const ro = qrStack && new ResizeObserver(measure);
-    if (ro) ro.observe(qrStack);
-    measure();
+    const qr = reserveQr(root);
+    const measure = qr.measure;
+    // nur so viele Karten zeigen, wie ganz in die Leiste passen – nichts wird angeschnitten
+    function fitRail() {
+      const row = root.classList.contains('portrait');
+      const limit = row ? railList.clientWidth : railList.clientHeight;
+      for (const c of railList.children) {
+        c.hidden = false;
+        const end = row ? c.offsetLeft + c.offsetWidth : c.offsetTop + c.offsetHeight;
+        if (end > limit + 1) c.hidden = true;
+      }
+    }
+    const orient = () => { root.classList.toggle('portrait', isPortrait()); fitRail(); };
+    const railRo = new ResizeObserver(() => fitRail());
+    railRo.observe(railList);
+    addEventListener('resize', orient);
+    orient();
 
     function nextItem() {
       if (!items.length) return null;
@@ -121,6 +163,7 @@
       cur = item;
       const isVideo = item.kind === 'video';
       const m = media(item, { full: true, play: isVideo });
+      capUpscale(m, stage, 2);
       const blurSrc = item.thumb || (isVideo ? '' : item.url);
       const next = el('div', { class: 'lb-slide' },
         blurSrc && el('div', { class: 'lb-blur', style: `background-image:${cssUrl(blurSrc)}` }),
@@ -160,6 +203,7 @@
       }, media(it), el('span', { class: 'lb-card-meta' },
         el('b', { text: it.title || KIND[it.kind] || 'Inhalt' }),
         el('small', { text: ago(it.createdAt, ctx.now()) })))));
+      fitRail();
     }
     const tickClock = () => { clock.textContent = hm(ctx.now()); renderBand(bandItems, program, ctx.now()); };
     const clockTimer = setInterval(tickClock, 10_000);
@@ -189,7 +233,11 @@
         if (on) { clearTimeout(timer); bar.style.transition = 'none'; if (v) v.pause(); }
         else { if (v) v.play().catch(() => {}); restart(settings.stageSeconds || 9); }
       },
-      destroy() { clearTimeout(timer); clearInterval(clockTimer); if (ro) ro.disconnect(); release(root); root.remove(); },
+      destroy() {
+        clearTimeout(timer); clearInterval(clockTimer); qr.stop(); railRo.disconnect();
+        removeEventListener('resize', orient);
+        release(root); root.remove();
+      },
     };
   }
 
@@ -197,12 +245,17 @@
   function Mosaik(host, ctx) {
     const grid = el('div', { class: 'lm-grid' });
     const title = el('h1');
+    const clock = el('div', { class: 'lb-clock' });
+    const logo = el('img', { class: 'lb-logo', alt: '', hidden: true });
     const bandItems = el('div', { class: 'band-items' });
     const root = el('div', { class: 'L-mosaik' },
-      grid,
-      el('div', { class: 'lm-title' }, el('small', { class: 'lb-kicker', text: 'Wall of Content' }), title),
-      el('div', { class: 'lm-band' }, bandItems));
+      el('header', { class: 'lm-head' },
+        el('div', { class: 'lm-title' }, el('small', { class: 'lb-kicker', text: 'Wall of Content' }), title),
+        el('div', { class: 'lb-head-right' }, logo, clock)),
+      el('div', { class: 'lm-area' }, grid),
+      el('footer', { class: 'lb-band lm-band' }, bandItems));
     host.append(root);
+    const qr = reserveQr(root);
 
     let items = [];
     let tiles = [];
@@ -211,9 +264,11 @@
     let cols = 0;
     let rows = 0;
 
+    /** Spalten/Zeilen so wählen, dass die Kacheln ungefähr quadratisch sind. */
     function dims() {
-      const c = Math.min(8, Math.max(3, Math.round(innerWidth / 300)));
-      const r = Math.max(2, Math.round(innerHeight / (innerWidth / c)));
+      const W = grid.clientWidth || innerWidth, H = grid.clientHeight || innerHeight;
+      const r = Math.min(6, Math.max(2, Math.round(H / Math.max(220, Math.min(W, H) / 3.2))));
+      const c = Math.min(9, Math.max(2, Math.round(W / (H / r))));
       return [c, r];
     }
     /** Lückenlose Aufteilung in große (2×2), breite/hohe (2×1, 1×2) und kleine Kacheln. */
@@ -250,9 +305,26 @@
     }
 
     function fill(tile, item, fresh) {
-      const layer = el('div', { class: 'lm-layer' }, media(item),
+      // große Kacheln bekommen das Originalbild, damit nichts unscharf hochskaliert wird
+      const m = media(item, { full: tile.classList.contains('big') || !item.thumb });
+      const blurSrc = item.thumb || (item.kind === 'video' ? '' : item.url);
+      const blur = blurSrc ? el('div', { class: 'lm-blur', style: `background-image:${cssUrl(blurSrc)}` }) : null;
+      const layer = el('div', { class: 'lm-layer' }, blur, m,
         item.kind === 'video' && el('span', { class: 'lm-play', text: '▶' }),
         fresh && el('span', { class: 'pill pill-new lm-new', text: 'Neu' }));
+      // Passt das Seitenverhältnis nicht zur Kachel (Panorama, Hochformat) oder ist die Datei klein,
+      // wird sie ganz gezeigt statt angeschnitten/aufgeblasen – mit unscharfem Hintergrund.
+      whenSized(m, (w, h) => {
+        const tw = tile.clientWidth, th = tile.clientHeight;
+        if (!tw || !th) return;
+        const a = w / h, t = tw / th;
+        const cover = Math.max(tw / w, th / h);
+        const fullFile = m.tagName === 'VIDEO' || m.currentSrc === item.url || m.src.endsWith(item.url);
+        if (Math.max(a / t, t / a) > 1.4 || (fullFile && cover > 2.2)) {
+          layer.classList.add('fit');
+          capUpscale(m, tile, 2);
+        }
+      });
       const old = tile.querySelector('.lm-layer.in');
       tile.append(layer);
       tile._item = item;
@@ -271,6 +343,7 @@
       grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
       grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
       release(grid);
+      grid.style.setProperty('--cols', cols);
       tiles = tiling(cols, rows).map(({ y, x, h, w }) => {
         const tile = el('button', {
           class: 'lm-tile' + (h * w > 1 ? ' big' : ''), type: 'button', 'aria-label': 'Inhalt öffnen',
@@ -299,8 +372,10 @@
     }, 75_000);
     let resizeT = null;
     const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(() => { const [c, r] = dims(); if (c !== cols || r !== rows) build(); }, 300); };
-    addEventListener('resize', onResize);
-    const bandTimer = setInterval(() => renderBand(bandItems, program, ctx.now()), 10_000);
+    const areaRo = new ResizeObserver(onResize);
+    areaRo.observe(grid);
+    const tickClock = () => { clock.textContent = hm(ctx.now()); renderBand(bandItems, program, ctx.now()); };
+    const bandTimer = setInterval(tickClock, 10_000);
 
     return {
       update(list, { fresh = [] } = {}) {
@@ -319,15 +394,18 @@
         });
         if (!items.length) { release(grid); grid.replaceChildren(); tiles = []; }
       },
-      settings(s, prog) {
+      settings(s, prog, logoUrl) {
         program = prog || [];
         title.textContent = s.title || '';
-        renderBand(bandItems, program, ctx.now());
+        logo.hidden = !logoUrl;
+        if (logoUrl) logo.src = logoUrl;
+        tickClock();
+        qr.measure();
       },
       pause(on) { paused = on; },
       destroy() {
         clearInterval(swapTimer); clearInterval(retile); clearInterval(bandTimer);
-        removeEventListener('resize', onResize);
+        areaRo.disconnect(); qr.stop(); clearTimeout(resizeT);
         release(root); root.remove();
       },
     };

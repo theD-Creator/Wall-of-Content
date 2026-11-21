@@ -132,6 +132,7 @@ function applyDesign(settings) {
 }
 
 function applyTheme(settings, backgroundUrl, logoUrl) {
+  applyDesign(settings);
   for (const img of $$('img.logo')) { img.hidden = !logoUrl; if (logoUrl) img.src = logoUrl; }
   document.documentElement.style.setProperty('--accent', settings.accent || '#7c5cff');
   if ('autoFullscreen' in settings) Fullscreen.auto(settings.autoFullscreen);

@@ -178,6 +178,11 @@ bzw. `?design=neu` (geht auch beim Admin-Panel: `/admin?design=klassisch`).
 Schriften im neuen Design: **Outfit** (fette Überschriften) und **DM Sans** (Text). Sie sind in der App enthalten und
 funktionieren auch ohne Internet.
 
+Das Design gilt auch für die **Besucher-App, Fotostation, Color Hunt, Quiz** sowie die Download- und Einlöse-Seite:
+dunkel, große Überschriften, runde Buttons in Lime.
+
+![Fotostation und Besucher-App im neuen Design](screenshots/gaeste-neu.jpg)
+
 ### Neues Design: Bühne
 
 ![Wall im Layout „Bühne“](screenshots/wall-buehne.jpg)
@@ -197,7 +202,17 @@ funktionieren auch ohne Internet.
 - Der ganze Bildschirm ist ein Raster aus großen und kleinen Kacheln. Alle drei Sekunden tauscht eine Kachel sanft ihren
   Inhalt, gut eine Minute später ordnet sich das Raster neu.
 - Neue Fotos landen in den großen Kacheln und blinken kurz grün.
-- Titel oben links, „Jetzt live / Gleich“ unten links, QR-Codes unten rechts. Antippen öffnet groß.
+- Oben Titel, Logo und Uhrzeit, unten das Band mit „Jetzt live / Gleich“ und den QR-Codes. Nichts davon liegt über den
+  Kacheln. Antippen öffnet groß.
+- Passt ein Bild nicht zur Kachel (Panorama, sehr hohes Hochformat) oder ist die Datei klein, wird es **ganz** gezeigt –
+  mit unscharfem Hintergrund – statt angeschnitten oder aufgeblasen.
+
+**Kleine Dateien und Hochformat:** Kleine Bilder werden auf der Bühne und im Mosaik höchstens auf die doppelte Größe
+vergrößert und sonst mittig gezeigt. Steht der Bildschirm hochkant (z. B. iPad im Hochformat) oder ist er schmal wie ein
+Handy, rückt die Leiste „Neueste Inhalte“ als Reihe unter die Bühne. Es werden immer nur so viele Karten gezeigt, wie
+ganz hineinpassen.
+
+![Bühne im Hochformat](screenshots/wall-hochformat.jpg)
 
 **Bühne ⇄ Mosaik im Wechsel:** wechselt automatisch zwischen beiden Layouts (Standard alle 4 Minuten, einstellbar).
 
@@ -630,7 +645,9 @@ beendet es sofort.
 - Einschalten im Show-Modus: **„Bei Inaktivität zeigen“**, Wartezeit 0,5 bis 30 Minuten, Tempo einstellbar.
 - **Ecken-Modus:** Das Logo trifft garantiert **alle vier Ecken nacheinander** – oben links → oben rechts → unten rechts →
   unten links → … Jede Strecke wird so berechnet, dass das Logo nach 1 bis 5 Abprallern genau in der nächsten Ecke
-  landet. Jeder Eckentreffer blitzt kurz auf.
+  landet. Bei einem Eckentreffer wechselt nur das Logo die Farbe – der Bildschirm leuchtet nicht auf.
+- Hat die Logo-Datei einen durchsichtigen Rand, wird er automatisch abgeschnitten. So berührt das sichtbare Logo die
+  Ecken wirklich und prallt nicht schon vorher ab.
 - Ohne Ecken-Modus fliegt es klassisch im 45°-Winkel; Ecken werden dann nur zufällig getroffen.
 - **„DVD-Logo jetzt“** im Show-Modus startet es sofort (zum Testen), **„Wall aufwecken“** beendet es.
 

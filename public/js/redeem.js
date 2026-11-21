@@ -48,3 +48,4 @@
   Fullscreen.install();
   load();
 })();
+api('/api/state').then((s) => applyDesign(s.settings)).catch(() => {});

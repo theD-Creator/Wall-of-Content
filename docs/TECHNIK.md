@@ -220,6 +220,16 @@ Countdown, Rangliste, QR-Codes und DVD-Logo bleiben in `wall.js` und liegen übe
 `program` aus `/api/state`; Änderungen kommen per Live-Ereignis `program`. Die Verbund-Wall (`?pos=`) nutzt immer die
 schwebenden Kacheln.
 
+Beide Layouts passen Dateien ein, statt sie zu beschneiden oder aufzublasen: `capUpscale()` begrenzt die Vergrößerung
+kleiner Dateien auf das Doppelte; im Mosaik bekommen Kacheln mit stark abweichendem Seitenverhältnis die Klasse `fit`
+(ganzes Bild + unscharfer Hintergrund). Ist der Bildschirm hochkant (Breite/Höhe < 1,05), bekommt die Bühne die Klasse
+`portrait`. Die Leiste zeigt nur Karten, die ganz hineinpassen (`fitRail()`). Die Gästeseiten binden `neu.css` und
+`design.js` ebenfalls ein; `applyTheme()` ruft `applyDesign()` auf.
+
+**DVD-Logo.** `dvdBounds()` ermittelt beim Laden des Logos über ein Canvas den sichtbaren Bereich ohne durchsichtigen
+Rand. Die CSS-Maske wird so skaliert und verschoben, dass genau dieser Bereich die Box füllt. Dadurch stimmen die
+Eckentreffer im Ecken-Modus auch optisch.
+
 **Fotostation.** Das Foto wird im Browser zusammengesetzt: Bei deckenden Rahmen kommt das Kamerabild in das
 Fotofenster (Position in den Einstellungen), bei transparenten Rahmen liegt der Rahmen über dem Foto. Hochgeladen wird
 das fertige JPEG. Ohne Kamera-Freigabe wird die Kamera-App des Geräts über ein Datei-Eingabefeld verwendet.
