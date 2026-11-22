@@ -84,7 +84,7 @@
     return el('div', { class: 'band-item ticker' },
       el('span', { class: 'pill ' + (isLive(m, s, now) ? 'pill-live' : 'pill-moment'), text: isLive(m, s, now) ? '● Live Moment' : '📍 Moment' }),
       el('b', { text: m.moment.caption || 'Neuer Moment von ' + m.moment.by }),
-      m.moment.tags.length && el('span', { class: 'band-time', text: m.moment.tags.slice(0, 3).join(' ') }));
+      m.moment.tags.length > 0 && el('span', { class: 'band-time', text: m.moment.tags.slice(0, 3).join(' ') }));
   }
 
   function renderBand(box, program, now, ticker) {
@@ -291,7 +291,7 @@
           el('span', { class: 'lb-by' }, m.avatar ? el('img', { src: m.avatar, alt: '' }) : null, 'von ' + m.by),
           el('span', { class: 'lb-ago', text: ago(m.at, ctx.now()) })),
         m.caption && el('b', { text: m.caption }),
-        m.tags.length && el('div', { class: 'lb-tags' }, ...m.tags.map((t) => el('span', { text: t }))));
+        m.tags.length > 0 && el('div', { class: 'lb-tags' }, ...m.tags.map((t) => el('span', { text: t }))));
     }
     function advance() { show(nextItem(), false); }
     stage.addEventListener('click', () => { if (cur) ctx.open(cur); });

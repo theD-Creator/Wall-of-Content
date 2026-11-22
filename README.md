@@ -90,6 +90,10 @@ Schreibtisch, Dokumente) automatisch übernommen. Sicherung herunterladen/einspi
   Knopf **„Alle Inhalte“** auf der Wall zum Stöbern mit Filtern und Hashtags.
 - **📍 Moments (Live-Modus):** Die Redaktion (eigene Rolle) postet unter `/live` Fotos/Videos mit Text und Hashtags vom Handy.
   Optionen: sofort groß auf die Bühne, erst nach Freigabe, Live-Ticker im Band, Dauer des LIVE-Abzeichens, Hashtag-Vorschläge.
+- **🎵 Läuft gerade:** drehende Schallplatte mit Songtitel und Cover auf der Wall – automatisch aus Spotify/Apple Music auf
+  dem Mac oder aus der Textdatei der DJ-Software (VirtualDJ automatisch; Serato/Traktor/Rekordbox über ein Zusatzprogramm).
+- **📡 Livestream:** OBS streamt direkt an die Wall (`rtmp://<laptop-ip>:1935/live` + Stream-Key aus dem Admin-Panel);
+  Anzeige groß, auf der Bühne oder als Bild-im-Bild.
 - **💾 Sicherung:** alle Daten als ZIP herunterladen, einspielen oder aus einem alten Ordner übernehmen (startet sich selbst neu).
 - **🎬 Show:** die wichtigsten Schalter für die laufende Veranstaltung, jede Änderung wirkt sofort – Live-Steuerung der Wall,
   Color Hunt/Quiz/Stationen an/aus, Tempo, Kachelgröße, QR-Größe, Vorladen, DVD-Logo, Vollbild.

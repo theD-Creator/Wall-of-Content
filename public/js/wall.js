@@ -593,6 +593,8 @@
     document.documentElement.style.setProperty('--qr-scale', (settings.qrSize || 100) / 100);
     if (sizeChanged && !gridMode) { for (const b of bubbles.values()) { releaseMedia(b.el); b.el.remove(); } bubbles.clear(); }
     renderHunt(state.hunt || {});
+    renderNowPlaying(state.nowPlaying, state.nowPlayingV);
+    renderObs(state.obs);
     renderBoard((state.quiz || {}).board);
     const portal = $('#portalQr');
     // QR-Codes neu holen, wenn sie erscheinen oder sich die Einstellungen geändert haben (z. B. öffentliche Adresse)
@@ -796,6 +798,85 @@
     requestAnimationFrame(() => requestAnimationFrame(() => box.classList.add('open')));
   }
 
+  /* ---------------- „Läuft gerade“: Schallplatte mit Songtitel ---------------- */
+  let npKey = '';
+  let npSong = null;
+  let npV = 0; // Version der Meldung: Live-Ereignis und /api/state können sich überholen – die neuere gewinnt
+  function renderNowPlaying(song, v) {
+    if (v === undefined || v >= npV) { npSong = song; if (v !== undefined) npV = v; }
+    song = npSong;
+    const box = $('#nowPlaying');
+    const show = !!(settings.nowPlaying && song && song.title);
+    const key = show ? `${song.artist}|${song.title}` : '';
+    if (!show) { box.hidden = true; npKey = ''; return; }
+    if (key !== npKey) {
+      npKey = key;
+      $('#npTitle').textContent = song.title;
+      $('#npArtist').textContent = song.artist || '';
+      const img = $('#npCover');
+      img.hidden = !song.coverUrl;
+      if (song.coverUrl) img.src = song.coverUrl; else img.removeAttribute('src');
+      box.classList.remove('swap');
+      void box.offsetWidth;
+      box.classList.add('swap'); // neuer Song: Platte „wird aufgelegt“
+    }
+    box.classList.toggle('paused', !song.playing);
+    box.hidden = false;
+  }
+
+  /* ---------------- OBS-Livestream ---------------- */
+  /**
+   * Solange OBS an die Wall streamt, läuft das Bild – je nach Einstellung groß über der Wall, auf der Bühne
+   * (im Mosaik in der ersten Kachel) oder als Bild-im-Bild. Wiedergabe als HTTP-FLV mit mpegts.js.
+   */
+  const obs = { state: { live: false }, player: null, retry: null, box: $('#obsLive'), video: $('#obsVideo') };
+  function obsTarget() {
+    if (settings.obsDisplay !== 'buehne' || !layout) return null;
+    return document.querySelector('.L-buehne .lb-stage') || document.querySelector('.L-mosaik .lm-tile');
+  }
+  function placeObs() {
+    const target = obsTarget();
+    const parent = target || document.body;
+    if (obs.box.parentNode !== parent) {
+      parent.append(obs.box);
+      obs.video.play().catch(() => {});
+    }
+    obs.box.className = 'obs-live ' + (target ? 'in-stage' : settings.obsDisplay === 'pip' ? 'pip' : 'full');
+  }
+  function stopObs() {
+    if (!obs.player) return;
+    try { obs.player.pause(); obs.player.unload(); obs.player.detachMediaElement(); obs.player.destroy(); } catch { /* schon weg */ }
+    obs.player = null;
+  }
+  function startObs() {
+    if (obs.player || !window.mpegts || !mpegts.getFeatureList().mseLivePlayback) return;
+    const p = mpegts.createPlayer({ type: 'flv', isLive: true, url: '/api/obs/live.flv' }, {
+      enableStashBuffer: false, liveBufferLatencyChasing: true, liveBufferLatencyMaxLatency: 2.5, liveBufferLatencyMinRemain: 0.4,
+    });
+    p.on(mpegts.Events.ERROR, () => { // Verbindung weg: kurz warten und neu verbinden, solange der Stream läuft
+      stopObs();
+      clearTimeout(obs.retry);
+      obs.retry = setTimeout(() => renderObs(), 2000);
+    });
+    p.attachMediaElement(obs.video);
+    p.load();
+    obs.player = p;
+    const r = p.play();
+    if (r && r.catch) r.catch(() => { obs.video.muted = true; p.play(); }); // Ton ohne Berührung nicht erlaubt
+  }
+  function renderObs(st) {
+    if (st) obs.state = st;
+    const on = !!(settings.obsShow && obs.state.live && !gridMode);
+    document.body.classList.toggle('obs-on', on);
+    if (!on) { clearTimeout(obs.retry); stopObs(); obs.box.hidden = true; return; }
+    obs.video.muted = !settings.obsSound;
+    placeObs();
+    obs.box.hidden = false;
+    startObs();
+    activity();
+  }
+  setInterval(() => { if (!obs.box.hidden) placeObs(); }, 1000); // Bühne/Mosaik werden neu aufgebaut (Wechsel)
+
   /* ---------------- Quiz: Rangliste auf der Wall ---------------- */
   function renderBoard(board) {
     const box = $('#board');
@@ -998,7 +1079,7 @@
   }
   addEventListener('resize', () => { if (dvd.on) dvdResize(); });
   setInterval(() => {
-    if (current) lastActivity = Date.now(); // ein laufendes Video/Bild ist keine Inaktivität
+    if (current || document.body.classList.contains('obs-on')) lastActivity = Date.now(); // laufendes Video/Livestream ist keine Inaktivität
     if (dvd.on || gridMode || !settings.dvdMode || current || !$('#winner').hidden || !$('#huntFinal').hidden) return;
     if (Date.now() - lastActivity >= (settings.dvdIdle || 5) * 60_000) startDvd(false);
   }, 1000);
@@ -1042,6 +1123,8 @@
     settings: () => refresh(),
     hunt: () => loadState().catch(() => {}),
     program: () => loadState().catch(() => {}),
+    nowplaying: (d) => renderNowPlaying(d.song, d.v),
+    obs: (d) => renderObs(d),
     reconnect: () => refresh(),
     command: (c) => {
       if (c.action === 'reload') location.reload();

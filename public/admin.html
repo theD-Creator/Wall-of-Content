@@ -31,6 +31,7 @@
         <button data-tab="show" data-icon="🎬" class="active"><span class="emo">🎬 </span>Show</button>
         <button data-tab="overview" data-icon="🏠">Übersicht</button>
         <button data-tab="stage" data-icon="🎭">Bühne</button>
+        <button data-tab="obs" data-icon="📡">Livestream <span id="obsBadge" class="badge live-badge" hidden>LIVE</span></button>
         <button data-tab="moments" data-icon="📍">Moments <span id="momentBadge" class="badge" hidden></span></button>
         <span class="nav-group">Inhalte</span>
         <button data-tab="media" data-icon="🖼️">Inhalte</button>
@@ -101,6 +102,21 @@
             <div class="show-row"><span>Videos mit Ton</span><label class="switch"><input type="checkbox" data-show="videoSound"><span></span></label></div>
             <div class="show-row"><span>Inhalte vorab laden</span><label class="switch"><input type="checkbox" data-show="preloadMedia"><span></span></label></div>
             <p class="show-hint">Vorladen: Bilder und Videos der Wall werden im Hintergrund geladen und starten beim Antippen sofort.</p>
+          </div>
+          <div class="card show-card">
+            <h2>🎵 Läuft gerade</h2>
+            <div class="show-row"><span>Song auf der Wall zeigen</span><label class="switch"><input type="checkbox" data-show="nowPlaying"><span></span></label></div>
+            <label class="show-row"><span>Quelle</span>
+              <select data-show="nowPlayingSource">
+                <option value="auto">Automatisch (Spotify/Apple Music, sonst DJ-Software)</option>
+                <option value="mac">Nur Spotify / Apple Music auf diesem Mac</option>
+                <option value="datei">Nur DJ-Software (Textdatei)</option>
+              </select></label>
+            <label class="field"><span>Textdatei der DJ-Software (leer = VirtualDJ automatisch suchen)</span>
+              <input data-show="nowPlayingFile" placeholder="/Users/…/Documents/VirtualDJ/History/tracklist.txt"></label>
+            <div id="npStatus" class="np-status"></div>
+            <p class="show-hint">Spotify/Apple Music: Beim ersten Mal fragt macOS, ob das Terminal die App steuern darf – „OK“ klicken.
+              DJ-Software: VirtualDJ schreibt die Datei selbst; für Serato, Traktor oder Rekordbox z. B. „What's Now Playing“ eine Textdatei schreiben lassen.</p>
           </div>
           <div class="card show-card">
             <h2>📀 DVD-Logo</h2>
@@ -285,6 +301,39 @@
             <div id="stageFilter" class="chips"></div>
           </div>
           <div id="stageItems" class="stage-grid"></div>
+        </div>
+      </section>
+
+      <section data-panel="obs" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>📡 Livestream aus OBS</h2>
+            <div id="obsStatus" class="obs-status"></div>
+            <div class="obs-preview"><video id="obsPreview" playsinline muted></video><span id="obsPreviewNote" class="muted small">Vorschau erscheint, sobald OBS streamt.</span></div>
+            <div class="show-row"><span>Livestream auf der Wall zeigen</span><label class="switch"><input type="checkbox" data-setting="obsShow"><span></span></label></div>
+            <label class="show-row"><span>Anzeige</span>
+              <select data-setting="obsDisplay">
+                <option value="vollbild">Groß über der ganzen Wall</option>
+                <option value="buehne">Auf der Bühne (Mosaik: erste Kachel)</option>
+                <option value="pip">Bild-im-Bild oben rechts</option>
+              </select></label>
+            <div class="show-row"><span>Mit Ton</span><label class="switch"><input type="checkbox" data-setting="obsSound"><span></span></label></div>
+            <p class="show-hint">Ton gibt es nur, wenn an der Wall schon einmal getippt oder geklickt wurde – das verlangen die Browser.</p>
+          </div>
+          <div class="card">
+            <h2>So richtest du OBS ein</h2>
+            <ol class="obs-steps">
+              <li>In OBS: <b>Einstellungen → Stream</b>, Dienst <b>„Benutzerdefiniert…“</b>.</li>
+              <li><b>Server</b> eintragen:<div class="copy-row"><code id="obsServer">…</code><button class="btn small" type="button" data-copy="obsServer">Kopieren</button></div></li>
+              <li><b>Stream-Key</b> eintragen:<div class="copy-row"><code id="obsKey" class="secret">••••••••</code>
+                <button class="btn small" type="button" id="obsKeyShow">Zeigen</button><button class="btn small" type="button" data-copy="obsKey">Kopieren</button></div></li>
+              <li><b>„Stream starten“</b> klicken – nach ein, zwei Sekunden erscheint das Bild auf der Wall.</li>
+            </ol>
+            <p class="show-hint">Empfohlen in OBS unter <b>Ausgabe</b>: Encoder x264 oder Hardware (H.264), Keyframe-Intervall 2 s, 2500–6000 kbit/s.
+              Läuft OBS auf demselben Laptop, geht auch <code>rtmp://localhost:1935/live</code>. Auf einem anderen Rechner im selben WLAN
+              die Adresse oben verwenden (beim ersten Start fragt macOS evtl., ob eingehende Verbindungen erlaubt sind – „Erlauben“).</p>
+            <button id="obsKeyNew" class="btn small danger" type="button">Neuen Stream-Key erzeugen</button>
+          </div>
         </div>
       </section>
 
@@ -618,5 +667,7 @@
   <script src="/js/admin-pack.js"></script>
   <script src="/js/admin-backup.js"></script>
   <script src="/js/admin-live.js"></script>
+  <script src="/vendor/mpegts.js"></script>
+  <script src="/js/admin-obs.js"></script>
 </body>
 </html>

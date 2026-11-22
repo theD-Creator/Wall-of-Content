@@ -819,3 +819,55 @@ body.live .live-login { display: flex; flex-direction: column; gap: 16px; paddin
 .moment-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .role-select { width: auto; }
 @media (max-width: 600px) { .pl-item { grid-template-columns: 22px 52px minmax(0, 1fr); } .pl-actions { grid-column: 1 / -1; } .moment-row { grid-template-columns: 80px minmax(0, 1fr); } }
+
+/* „Läuft gerade“: drehende Schallplatte mit Songtitel (bei den QR-Codes) */
+.now-playing { display: flex; align-items: center; gap: .8rem; padding: .5rem 1rem .5rem .5rem; max-width: min(36vw, 520px);
+  background: #000b; border: 1px solid #ffffff38; border-radius: 999px; box-shadow: 0 8px 30px #0009; color: #fff; animation: fade .4s; }
+.np-vinyl { position: relative; flex: none; width: calc(clamp(56px, 9vh, 130px) * var(--qr-scale, 1)); aspect-ratio: 1; border-radius: 50%; }
+.np-vinyl::after { /* Lichtreflex – dreht sich nicht mit */
+  content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 30deg, transparent 0 8%, #ffffff2e 12%, transparent 18% 50%, #ffffff1f 62%, transparent 68%); }
+.np-disc { position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle, transparent 0 30%, #0000 30%), repeating-radial-gradient(circle, #121212 0 1.5px, #1f1f1f 1.5px 3px);
+  box-shadow: inset 0 0 0 2px #000, 0 4px 18px #000a; animation: np-spin 1.8s linear infinite; }
+.now-playing.paused .np-disc { animation-play-state: paused; }
+.np-label { width: 40%; aspect-ratio: 1; border-radius: 50%; overflow: hidden; position: relative;
+  background: radial-gradient(circle, #fff 0 6%, var(--accent) 7%); box-shadow: 0 0 0 2px #0006; }
+.np-label img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.np-label::after { content: ""; position: absolute; left: 50%; top: 50%; width: 12%; aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); background: #0b0b0f; box-shadow: 0 0 0 1px #fff6; }
+@keyframes np-spin { to { transform: rotate(360deg); } }
+.now-playing.swap .np-vinyl { animation: np-drop .8s cubic-bezier(.2, 1.4, .4, 1); }
+.now-playing.swap .np-text { animation: fade .6s; }
+@keyframes np-drop { from { transform: translateX(-40%) scale(.6) rotate(-90deg); opacity: 0; } }
+.np-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.np-text small { font-size: clamp(.55rem, 1.3vh, .95rem); letter-spacing: .12em; text-transform: uppercase; opacity: .75; }
+.np-text b { font-size: clamp(.8rem, 2.1vh, 1.7rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.np-text span { font-size: clamp(.65rem, 1.6vh, 1.25rem); opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.np-status { display: flex; flex-direction: column; gap: .3rem; }
+.np-status p { margin: 0; overflow-wrap: anywhere; }
+.np-now { display: flex; align-items: center; gap: .7rem; }
+.np-now img, .np-mini { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex: none; display: grid; place-items: center; background: var(--panel2); font-size: 1.4rem; animation: np-spin 4s linear infinite; }
+.np-now div { display: flex; flex-direction: column; min-width: 0; }
+
+/* OBS-Livestream auf der Wall */
+.obs-live { background: #000; overflow: hidden; }
+.obs-live video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+.obs-live.full { position: fixed; inset: 0; z-index: 7; }
+.obs-live.pip { position: fixed; top: 3vh; right: 3vh; width: 32vw; aspect-ratio: 16 / 9; z-index: 9; border-radius: 22px; box-shadow: 0 20px 60px #000c, 0 0 0 2px #ffffff30; }
+.obs-live.in-stage { position: absolute; inset: 0; z-index: 3; }
+.obs-badge { position: absolute; top: 2.4vh; left: 2.4vh; z-index: 1; padding: .35em .9em; border-radius: 999px; background: #e53935; color: #fff;
+  font-weight: 800; letter-spacing: .1em; text-transform: uppercase; font-size: clamp(.7rem, 1.8vh, 1.4rem); box-shadow: 0 4px 18px #0008; animation: blink 1.6s steps(2) infinite; }
+.obs-live.pip .obs-badge { top: 1.4vh; left: 1.4vh; }
+body.wall.obs-on .wall-empty { display: none; }
+
+/* Admin: Livestream */
+.live-badge { background: #e53935 !important; color: #fff !important; animation: blink 1.6s steps(2) infinite; }
+.obs-status .obs-on-air { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+.status.live { background: #e53935; color: #fff; }
+.obs-preview { position: relative; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; background: #000; display: grid; place-items: center; }
+.obs-preview video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.obs-preview .muted { color: #aaa; padding: 1rem; text-align: center; }
+.obs-steps { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: .7rem; line-height: 1.45; }
+.copy-row { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-top: .3rem; }
+.copy-row code { font-size: .95rem; padding: .35em .6em; overflow-wrap: anywhere; }

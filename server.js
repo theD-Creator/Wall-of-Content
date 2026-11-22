@@ -131,6 +131,14 @@ const SETTINGS = {
   momentTicker: { type: 'bool', def: true },    // Moments als Live-Ticker im Band
   momentHighlightMin: { type: 'int', min: 1, max: 240, def: 15 }, // so lange gilt ein Moment als „LIVE“
   momentTags: { type: 'string', max: 400, def: '#UrbanArtNight #tecspaze #Backstage #Live #Graffiti' },
+  // „Läuft gerade“: Songtitel mit drehender Schallplatte auf der Wall (lib/nowplaying.js)
+  nowPlaying: { type: 'bool', def: false },
+  nowPlayingSource: { type: 'enum', values: ['auto', 'mac', 'datei'], def: 'auto' },
+  nowPlayingFile: { type: 'string', max: 500, def: '' },
+  // OBS-Livestream auf der Wall (lib/obs.js, lib/rtmp.js)
+  obsShow: { type: 'bool', def: true },
+  obsDisplay: { type: 'enum', values: ['vollbild', 'buehne', 'pip'], def: 'vollbild' },
+  obsSound: { type: 'bool', def: false },
 };
 const newId = () => crypto.randomBytes(9).toString('base64url');
 let settingsVersion = Date.now(); // ändert sich bei jeder Einstellungsänderung (Wall holt dann z. B. QR-Codes neu)
@@ -193,6 +201,7 @@ try {
   db.quiz = { ...emptyQuiz(), ...(raw.quiz || {}) };
   db.users = Array.isArray(raw.users) ? raw.users : [];
   db.portal = raw.portal && typeof raw.portal === 'object' ? raw.portal : {};
+  if (raw.obs && typeof raw.obs === 'object') db.obs = raw.obs; // Stream-Key für OBS
   db.items = Array.isArray(raw.items) ? raw.items : [];
   db.assets = { frames: {}, backgrounds: {}, ...(raw.assets || {}) };
 } catch (e) {
@@ -534,6 +543,9 @@ app.get('/api/state', async (_req, res) => {
     program: ((db.portal && db.portal.program) || []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
       .map(({ id, title, start, end, highlight }) => ({ id, title, start, end, highlight })),
     now: Date.now(),
+    nowPlaying: db.settings.nowPlaying ? nowPlaying.current() : null,
+    nowPlayingV: nowPlaying.version(),
+    obs: obsLive.state(),
   });
 });
 
@@ -544,6 +556,8 @@ const FONT_FILES = {
   'dm-sans-latin.woff2': '@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2',
   'dm-sans-latin-ext.woff2': '@fontsource-variable/dm-sans/files/dm-sans-latin-ext-wght-normal.woff2',
 };
+// Wiedergabe des OBS-Livestreams im Browser (mpegts.js, Apache-2.0)
+app.get('/vendor/mpegts.js', (_req, res) => res.set('Cache-Control', 'public, max-age=86400').sendFile(path.join(ROOT, 'node_modules', 'mpegts.js', 'dist', 'mpegts.js')));
 app.get('/vendor/fonts/:file', (req, res) => {
   const rel = FONT_FILES[req.params.file];
   if (!rel) return res.status(404).end();
@@ -818,6 +832,7 @@ app.put('/api/admin/settings', requireAdmin, async (req, res) => {
   settingsVersion = Date.now();
   save();
   broadcast('settings');
+  if (['nowPlaying', 'nowPlayingSource', 'nowPlayingFile'].some((k) => k in patch)) setTimeout(() => nowPlaying.poll(), 20);
   res.json({ settings: db.settings });
 });
 
@@ -1476,6 +1491,12 @@ require('./lib/pack')({
   app, requireGlobal, getDb: () => db, ROOT, UPLOADS, ASSETS, USER_ASSETS,
   startPasswordActive: () => !!startPassword, globalAdminName: () => globalAdmin().name,
 });
+
+// „Läuft gerade“: Spotify/Apple Music auf dem Mac oder Textdatei der DJ-Software (lib/nowplaying.js)
+const nowPlaying = require('./lib/nowplaying')({ app, getDb: () => db, broadcast, requireAdmin, DATA });
+
+// OBS-Livestream: RTMP-Eingang auf Port 1935, Wiedergabe auf der Wall (lib/obs.js)
+const obsLive = require('./lib/obs')({ app, getDb: () => db, save, broadcast, requireAdmin, requestHostname });
 
 // Sicherung herunterladen/einspielen, Daten aus alten Versionen übernehmen (lib/backup.js)
 let migrationInfo = null;

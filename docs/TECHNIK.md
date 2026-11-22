@@ -33,6 +33,8 @@ Für alle, die die Wall of Content betreiben, anpassen oder weiterentwickeln. Di
 | `lib/pack.js`, `lib/zip.js` | Paket teilen: komplette Wall of Content als ZIP (eigener ZIP-Schreiber mit ZIP64, ohne Zusatzpakete) |
 | `lib/portal.js` | Besucher-App: Besucherprofile, Live-Programm, Challenges, Merch-Shop mit Coupons, Feedback |
 | `lib/moments.js` | Live-Modus: Moments der Redaktion (`/live`, Upload, Vorschaubild, eigene Moments) |
+| `lib/nowplaying.js` | „Läuft gerade“: Song aus Spotify/Apple Music (macOS, `osascript`) oder aus der Textdatei einer DJ-Software |
+| `lib/rtmp.js`, `lib/obs.js` | OBS-Livestream: eigener RTMP-Empfänger (Port 1935, Stream-Key), Weitergabe als HTTP-FLV an die Wall |
 | `lib/datadir.js` | Datenordner bestimmen (`~/Wall of Content Daten`), alte Installationen finden und automatisch übernehmen |
 | `lib/backup.js`, `lib/unzip.js` | Sicherung als ZIP herunterladen/einspielen, Übernahme aus altem Ordner; eigener ZIP-Leser (ZIP64, Deflate) |
 | `lib/supervisor.js` | Wächterprozess: startet den Server als Kindprozess und nach Einspielen einer Sicherung neu (Exit-Code 75) |
@@ -190,6 +192,8 @@ Ein 8-stelliger Besucher-Code erlaubt das Mitnehmen auf ein anderes Gerät.
 | Bühne | `PATCH /api/admin/items/:id` (`stagePin`, `stageHide`), `PUT /api/admin/stage/order` `{ ids }`; Einstellungen `stageMode` (`alle` \| `playlist`), `browseButton` |
 | Moments | `GET /api/admin/moments`, `PATCH /api/admin/items/:id` (`onWall`, `caption`, `tags`); Einstellungen `momentInstant`, `momentApproval`, `momentTicker`, `momentHighlightMin`, `momentTags` |
 | Live-Kamera (Redaktion) | `GET /api/live/me`, `GET /api/live/moments`, `POST /api/live/moments?caption=&tags=&w=&h=` (Body = Datei), `PUT /api/live/moments/:id/thumb`, `DELETE /api/live/moments/:id` |
+| Läuft gerade | `GET /api/nowplaying`, `GET /api/nowplaying/cover`, `GET /api/admin/nowplaying` (mit gefundenen Quellen); Einstellungen `nowPlaying`, `nowPlayingSource` (`auto` \| `mac` \| `datei`), `nowPlayingFile` |
+| Livestream | `GET /api/obs/live.flv` (öffentlich, nur solange live), `GET /api/admin/obs`, `POST /api/admin/obs/key`; Einstellungen `obsShow`, `obsDisplay` (`vollbild` \| `buehne` \| `pip`), `obsSound` |
 | Sicherung (nur Global Admin) | `GET /api/admin/backup/info`, `GET /api/admin/backup.zip`, `POST /api/admin/backup/restore` (Body = ZIP), `POST /api/admin/backup/import` `{ path }`, `GET /api/admin/backup/old` |
 | Inhalte | `POST /api/admin/media`, `PUT /api/admin/items/:id/thumb`, `PATCH /api/admin/items/:id`, `DELETE /api/admin/items/:id` |
 | Rahmen & Hintergründe | `POST /api/admin/assets/:kind`, `PATCH /api/admin/assets/:kind/:file`, `DELETE /api/admin/assets/:kind/:file` |
@@ -250,6 +254,22 @@ dadurch bleibt das klassische Aussehen unverändert. Die Schriften kommen aus `@
 `tickerItem()` zeigt bei `momentTicker` die fünf neuesten Moments im Band (Wechsel alle 8 s). `openBrowser()` ist das
 Raster „Alle Inhalte“ (z-index unter dem Viewer, schließt nach 45 s ohne Berührung). `feature(item)` setzt einen Inhalt
 auf Befehl `stage` auf die Bühne bzw. in die große Mosaik-Kachel.
+
+**Läuft gerade** (`lib/nowplaying.js`). Alle 3 s: Auf macOS prüft `pgrep -x Spotify|Music`, ob die App läuft, dann liest
+`osascript` Zustand, Titel, Interpret, Album (Spotify zusätzlich die Cover-URL, die der Server lädt – nur von Spotify-CDNs;
+Apple Music schreibt das Cover per AppleScript in `<Daten>/.cover-music`). Ohne spielende App wird die DJ-Datei gelesen
+(letzte sinnvolle Zeile der letzten 16 KB, Zeitstempel wie „21:03 :“ und Dateipfade werden entfernt, „Interpret - Titel“
+wird getrennt; älter als 45 min = nichts). Änderungen gehen als Live-Ereignis `nowplaying` mit Versionsnummer `v` an die
+Wall; `/api/state` liefert `nowPlaying` und `nowPlayingV`, die Wall nimmt immer die neuere Meldung. Erst der Titel, das
+Cover folgt, sobald es geladen ist.
+
+**OBS-Livestream** (`lib/rtmp.js`, `lib/obs.js`). Minimaler RTMP-Server ohne Zusatzpakete: einfacher Handshake,
+Chunk-Stream mit Extended Timestamps, AMF0-Befehle (`connect` nur mit App `live`, `createStream`, `publish` mit Prüfung
+des Stream-Keys in konstanter Zeit, `FCUnpublish`/`deleteStream`), Acknowledgements. Metadaten, AVC- und AAC-Konfiguration
+und die letzte GOP werden zwischengespeichert, damit neue Zuschauer sofort ein Bild haben; Zuschauer, die mehr als 16 MB
+hinterherhängen, werden getrennt. `/api/obs/live.flv` liefert FLV mit pro Zuschauer neu basierten Zeitstempeln; die Wall
+spielt es mit `mpegts.js` (Apache-2.0, `/vendor/mpegts.js`) mit Latenz-Nachführung (~0,5–2 s). Live-Ereignis `obs`
+(`live`, `since`, `info`) und `obs` in `/api/state`. Der Stream-Key liegt in `db.json` unter `obs.key`.
 
 **Video-Vorschau** (`VideoPreview` in `common.js`). Videos in Kacheln, Leiste, Mosaik, „Alle Inhalte“ und Admin-Liste
 starten als Standbild. Ein Abgleich alle 1,5 s tauscht sichtbare Standbilder gegen stumm laufende Videos (höchstens 4,

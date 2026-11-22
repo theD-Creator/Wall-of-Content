@@ -41,7 +41,15 @@
     <h2>🏆 Quiz-Rangliste</h2>
     <ol id="boardList"></ol>
   </aside>
+  <div id="obsLive" class="obs-live full" hidden>
+    <video id="obsVideo" playsinline muted></video>
+    <span class="obs-badge">● Live</span>
+  </div>
   <div class="qr-stack">
+    <aside id="nowPlaying" class="now-playing" hidden aria-live="polite">
+      <div class="np-vinyl"><div class="np-disc"><div class="np-label"><img id="npCover" alt="" hidden></div></div></div>
+      <div class="np-text"><small>♪ Läuft gerade</small><b id="npTitle"></b><span id="npArtist"></span></div>
+    </aside>
     <aside id="portalQr" class="hunt-qr portal-qr" hidden>
       <img alt="QR-Code zur Besucher-App">
       <div><b>PROGRAMM</b><span>&amp; Challenges</span></div>
@@ -68,6 +76,7 @@
     <div id="dvdLogo" class="dvd-logo"><span>tecspaze</span></div>
   </div>
   <script src="/js/common.js"></script>
+  <script src="/vendor/mpegts.js"></script>
   <script src="/js/wall-layouts.js"></script>
   <script src="/js/wall.js"></script>
 </body>

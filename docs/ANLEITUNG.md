@@ -24,6 +24,8 @@ Diese Anleitung erklärt, wie du die Wall of Content startest, einrichtest und w
 18. [Bühne: Playlist und „Alle Inhalte“](#18-bühne-playlist-und-alle-inhalte)
 19. [Live-Modus: Moments der Redaktion](#19-live-modus-moments-der-redaktion)
 20. [Daten, Updates und Sicherung](#20-daten-updates-und-sicherung)
+21. [Läuft gerade: Songtitel mit Schallplatte](#21-läuft-gerade-songtitel-mit-schallplatte)
+22. [Livestream aus OBS auf der Wall](#22-livestream-aus-obs-auf-der-wall)
 
 ---
 
@@ -775,3 +777,57 @@ alten `assets/`-Ordner. Das Original bleibt unverändert; dort liegt danach eine
 ![Sicherung](screenshots/admin-sicherung.jpg)
 
 Einen anderen Datenordner kannst du mit `DATA_DIR=/pfad npm start` festlegen.
+
+---
+
+## 21. Läuft gerade: Songtitel mit Schallplatte
+
+Auf der Wall erscheint – wie die QR-Codes – eine **drehende Schallplatte** mit dem Cover in der Mitte, dem **Songtitel** und
+dem **Interpreten**. Bei jedem neuen Song wird die Platte neu „aufgelegt“; ist die Musik pausiert, verschwindet sie.
+
+![Läuft gerade auf der Wall](screenshots/wall-musik.jpg)
+
+Einschalten im **Show-Modus → 🎵 Läuft gerade**. Dort siehst du auch, welcher Song erkannt wurde und woher.
+
+| Quelle | So funktioniert es |
+|---|---|
+| **Spotify / Apple Music** | Läuft auf dem Mac, auf dem die Wall of Content gestartet ist, wird der Song automatisch erkannt – mit Cover. Beim ersten Mal fragt macOS, ob das Terminal „Spotify“ bzw. „Musik“ steuern darf: **OK** klicken (sonst: Systemeinstellungen → Datenschutz & Sicherheit → Automation). |
+| **DJ-Software** | Die App liest den letzten Eintrag einer Textdatei („Interpret - Titel“). **VirtualDJ** schreibt sie selbst (`Dokumente/VirtualDJ/History/tracklist.txt`, wird automatisch gefunden). Für **Serato, Traktor oder Rekordbox** ein Zusatzprogramm wie „What's Now Playing“ eine Textdatei schreiben lassen und deren Pfad im Show-Modus eintragen. |
+
+Mit **Quelle → Automatisch** gewinnt Spotify/Apple Music, solange dort etwas spielt; sonst kommt der Song aus der DJ-Datei.
+Einträge, die älter als 45 Minuten sind, gelten nicht mehr als „läuft gerade“.
+
+---
+
+## 22. Livestream aus OBS auf der Wall
+
+Mit OBS kannst du ein Livebild – z. B. die Kamera an der Bühne – direkt auf die Wall schicken. Die Wall of Content hat dafür
+einen eigenen Stream-Empfänger; du brauchst keinen YouTube- oder Twitch-Account.
+
+**In OBS einrichten** (die Werte stehen im Admin-Panel unter **Live → 📡 Livestream** zum Kopieren):
+
+1. OBS → **Einstellungen → Stream**, Dienst **„Benutzerdefiniert…“**.
+2. **Server:** `rtmp://<laptop-ip>:1935/live` (läuft OBS auf demselben Laptop, geht auch `rtmp://localhost:1935/live`).
+3. **Stream-Key:** den Key aus dem Admin-Panel einfügen.
+4. **Stream starten** – nach ein, zwei Sekunden läuft das Bild auf der Wall; im Admin-Panel steht „● LIVE“ mit Vorschau.
+
+Empfohlen unter **Einstellungen → Ausgabe**: H.264 (x264 oder Hardware-Encoder), Keyframe-Intervall 2 s, 2500–6000 kbit/s.
+Läuft OBS auf einem anderen Rechner, muss er im selben Netz sein. Fragt macOS beim ersten Start, ob „node“ eingehende
+Verbindungen annehmen darf: **Erlauben**.
+
+![Livestream im Admin-Panel](screenshots/admin-livestream.jpg)
+
+**Anzeige auf der Wall** (im Admin-Panel unter Livestream):
+
+| Einstellung | Wirkung |
+|---|---|
+| Groß über der ganzen Wall | Das Livebild füllt den Bildschirm; QR-Codes und „Läuft gerade“ bleiben sichtbar. |
+| Auf der Bühne | Das Livebild läuft in der Bühne (im Mosaik in der ersten Kachel), der Rest der Wall bleibt. Im klassischen Design: groß. |
+| Bild-im-Bild | Kleines Fenster oben rechts. |
+| Mit Ton | Ton nur, wenn an der Wall schon einmal getippt wurde – das verlangen die Browser. |
+
+![Livestream auf der Bühne](screenshots/wall-livestream.jpg)
+
+Sobald OBS den Stream beendet, zeigt die Wall wieder ihre Inhalte; das DVD-Logo startet nicht, solange der Stream läuft.
+Es kann immer nur ein Stream gleichzeitig senden. **„Neuen Stream-Key erzeugen“** macht den alten Key sofort ungültig (z. B.
+wenn er in falsche Hände geraten ist). Anderer Port: `RTMP_PORT=1936 npm start`, ausschalten mit `RTMP_PORT=0`.

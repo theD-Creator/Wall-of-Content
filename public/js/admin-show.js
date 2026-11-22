@@ -81,3 +81,28 @@
   }
   (window.adminExtensions ||= []).push(render);
 })();
+
+/* „Läuft gerade“: aktuellen Song und gefundene Quellen anzeigen */
+(() => {
+  const box = $('#npStatus');
+  if (!box) return;
+  const SRC = { spotify: 'Spotify', music: 'Apple Music', datei: 'DJ-Software' };
+  let t = null;
+  async function refresh() {
+    clearTimeout(t);
+    if (!$('[data-panel="show"]').classList.contains('active')) { t = setTimeout(refresh, 4000); return; }
+    try {
+      const { song, status } = await api('/api/admin/nowplaying');
+      const lines = [];
+      lines.push(song
+        ? el('div', { class: 'np-now' }, song.coverUrl ? el('img', { src: song.coverUrl, alt: '' }) : el('span', { class: 'np-mini', text: '♪' }),
+          el('div', {}, el('b', { text: song.title }), el('small', { class: 'muted', text: [song.artist, SRC[song.source]].filter(Boolean).join(' · ') })))
+        : el('p', { class: 'muted small', text: 'Gerade läuft nichts (oder die Anzeige ist aus).' }));
+      lines.push(el('p', { class: 'muted small', text: `Spotify/Apple Music: ${status.mac}` }));
+      lines.push(el('p', { class: 'muted small', text: status.fileFound ? `DJ-Datei: ${status.file}` : status.file ? `DJ-Datei nicht gefunden: ${status.file}` : 'DJ-Datei: keine VirtualDJ-Datei gefunden' }));
+      box.replaceChildren(...lines);
+    } catch { /* nicht angemeldet o. Ä. */ }
+    t = setTimeout(refresh, 4000);
+  }
+  refresh();
+})();

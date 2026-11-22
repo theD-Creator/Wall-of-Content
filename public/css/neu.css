@@ -522,3 +522,16 @@ html[data-design="neu"] .pill-tag { background: #ffffff1f; color: #fff; }
 .wb-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 3vh 1vw 1vh; text-align: left; font: 700 clamp(.75rem, 1.8vh, 1.4rem) var(--font-body);
   background: linear-gradient(transparent, #000c); color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .L-buehne.portrait .lb-browse { padding: 1vh 2.4vw; }
+
+/* „Läuft gerade“ im neuen Design */
+html[data-design="neu"] body.wall .now-playing { background: var(--n-black); border: 0; border-radius: 999px; box-shadow: none; padding: .8vh 1.6vw .8vh .8vh; max-width: 30vw; }
+html[data-design="neu"] body.wall .np-text small { font-family: var(--font-body); font-weight: 800; color: var(--n-lime); opacity: 1; }
+html[data-design="neu"] body.wall .np-text b { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; }
+html[data-design="neu"] body.wall .np-text span { font-family: var(--font-body); }
+html[data-design="neu"] body.wall .np-label { background: radial-gradient(circle, #fff 0 6%, var(--n-violet) 7%); }
+html[data-design="neu"] body.wall.layout-on .np-vinyl { width: clamp(56px, calc(11vh * var(--qr-scale, 1)), 220px); }
+
+html[data-design="neu"] body.wall .obs-badge { font-family: var(--font-display); background: var(--accent, #e10b70); }
+html[data-design="neu"] body.wall .obs-live.in-stage { border-radius: 32px; }
+html[data-design="neu"] body.wall.layout-on .obs-live.pip { top: 18vh; right: 2.4vw; width: 26vw; border-radius: 26px; }
+html[data-design="neu"] body.admin .status.live, html[data-design="neu"] body.admin .live-badge { background: #e53935; color: #fff; }
