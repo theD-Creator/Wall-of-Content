@@ -871,3 +871,4 @@ body.wall.obs-on .wall-empty { display: none; }
 .obs-steps { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: .7rem; line-height: 1.45; }
 .copy-row { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-top: .3rem; }
 .copy-row code { font-size: .95rem; padding: .35em .6em; overflow-wrap: anywhere; }
+.show-row select { min-width: 0; max-width: 62%; text-overflow: ellipsis; }

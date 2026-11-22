@@ -791,10 +791,17 @@ Einschalten im **Show-Modus → 🎵 Läuft gerade**. Dort siehst du auch, welch
 
 | Quelle | So funktioniert es |
 |---|---|
-| **Spotify / Apple Music** | Läuft auf dem Mac, auf dem die Wall of Content gestartet ist, wird der Song automatisch erkannt – mit Cover. Beim ersten Mal fragt macOS, ob das Terminal „Spotify“ bzw. „Musik“ steuern darf: **OK** klicken (sonst: Systemeinstellungen → Datenschutz & Sicherheit → Automation). |
+| **Dieser Rechner** (Apps **und Browser**) | Musik auf dem Laptop, auf dem die Wall of Content läuft, wird automatisch erkannt – auch **Spotify Web, YouTube Music, SoundCloud** im Browser. **Linux:** über die Medien-Schnittstelle des Desktops (MPRIS) – Chrome, Chromium, Brave, Edge, Firefox, Spotify, VLC … mit Titel, Interpret und Cover. Wichtig: den Server im Terminal des angemeldeten Desktops starten. **Mac:** Spotify- und Musik-App mit Cover sowie Browser-Tabs von Chrome, Brave, Edge, Arc, Vivaldi und Safari (Titel aus dem Tab). Beim ersten Mal fragt macOS, ob das Terminal die App bzw. den Browser steuern darf: **OK** klicken (sonst: Systemeinstellungen → Datenschutz & Sicherheit → Automation). Wer `nowplaying-cli` (Homebrew) installiert hat, bekommt alles, was macOS unter „Jetzt läuft“ zeigt. **Windows:** alle Apps und Browser, die im Lautstärke-Fenster von Windows erscheinen. |
 | **DJ-Software** | Die App liest den letzten Eintrag einer Textdatei („Interpret - Titel“). **VirtualDJ** schreibt sie selbst (`Dokumente/VirtualDJ/History/tracklist.txt`, wird automatisch gefunden). Für **Serato, Traktor oder Rekordbox** ein Zusatzprogramm wie „What's Now Playing“ eine Textdatei schreiben lassen und deren Pfad im Show-Modus eintragen. |
 
-Mit **Quelle → Automatisch** gewinnt Spotify/Apple Music, solange dort etwas spielt; sonst kommt der Song aus der DJ-Datei.
+| **Von Hand** | Quelle „Von Hand eintragen“ wählen und „Interpret - Titel“ eintippen, z. B. für eine Live-Band. |
+
+Mit **Quelle → Automatisch** gewinnt dieser Rechner, solange dort etwas spielt (Musik-Apps vor dem Browser); sonst kommt der
+Song aus der DJ-Datei. Unter dem Schalter zeigt das Admin-Panel, welche Player gefunden wurden („Dieser Rechner: Chrome (spielt:
+…)“) – und falls etwas fehlt, einen Hinweis, was zu tun ist.
+
+**Musik läuft auf einem anderen Gerät** (Handy, DJ-Laptop, Bluetooth-Box)? Dann sieht die Wall of Content sie nicht – dafür
+„DJ-Software“ oder „Von Hand“ nutzen.
 Einträge, die älter als 45 Minuten sind, gelten nicht mehr als „läuft gerade“.
 
 ---

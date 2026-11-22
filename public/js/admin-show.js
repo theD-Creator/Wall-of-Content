@@ -86,7 +86,7 @@
 (() => {
   const box = $('#npStatus');
   if (!box) return;
-  const SRC = { spotify: 'Spotify', music: 'Apple Music', datei: 'DJ-Software' };
+  const SRC = { manuell: 'von Hand' };
   let t = null;
   async function refresh() {
     clearTimeout(t);
@@ -96,9 +96,10 @@
       const lines = [];
       lines.push(song
         ? el('div', { class: 'np-now' }, song.coverUrl ? el('img', { src: song.coverUrl, alt: '' }) : el('span', { class: 'np-mini', text: '♪' }),
-          el('div', {}, el('b', { text: song.title }), el('small', { class: 'muted', text: [song.artist, SRC[song.source]].filter(Boolean).join(' · ') })))
+          el('div', {}, el('b', { text: song.title }), el('small', { class: 'muted', text: [song.artist, SRC[song.source] || song.source].filter(Boolean).join(' · ') })))
         : el('p', { class: 'muted small', text: 'Gerade läuft nichts (oder die Anzeige ist aus).' }));
-      lines.push(el('p', { class: 'muted small', text: `Spotify/Apple Music: ${status.mac}` }));
+      lines.push(el('p', { class: 'muted small', text: `Dieser Rechner: ${status.system}` }));
+      if (status.hint) lines.push(el('p', { class: 'share-warn', text: '⚠️ ' + status.hint }));
       lines.push(el('p', { class: 'muted small', text: status.fileFound ? `DJ-Datei: ${status.file}` : status.file ? `DJ-Datei nicht gefunden: ${status.file}` : 'DJ-Datei: keine VirtualDJ-Datei gefunden' }));
       box.replaceChildren(...lines);
     } catch { /* nicht angemeldet o. Ä. */ }

@@ -108,15 +108,20 @@
             <div class="show-row"><span>Song auf der Wall zeigen</span><label class="switch"><input type="checkbox" data-show="nowPlaying"><span></span></label></div>
             <label class="show-row"><span>Quelle</span>
               <select data-show="nowPlayingSource">
-                <option value="auto">Automatisch (Spotify/Apple Music, sonst DJ-Software)</option>
-                <option value="mac">Nur Spotify / Apple Music auf diesem Mac</option>
+                <option value="auto">Automatisch (dieser Rechner, sonst DJ-Software)</option>
+                <option value="mac">Nur Musik auf diesem Rechner (Apps &amp; Browser)</option>
                 <option value="datei">Nur DJ-Software (Textdatei)</option>
+                <option value="manuell">Von Hand eintragen</option>
               </select></label>
+            <label class="field"><span>Von Hand: „Interpret - Titel“ (nur bei Quelle „Von Hand“)</span>
+              <input data-show="nowPlayingManual" maxlength="200" placeholder="z. B. The Band - Live-Set"></label>
             <label class="field"><span>Textdatei der DJ-Software (leer = VirtualDJ automatisch suchen)</span>
               <input data-show="nowPlayingFile" placeholder="/Users/…/Documents/VirtualDJ/History/tracklist.txt"></label>
             <div id="npStatus" class="np-status"></div>
-            <p class="show-hint">Spotify/Apple Music: Beim ersten Mal fragt macOS, ob das Terminal die App steuern darf – „OK“ klicken.
-              DJ-Software: VirtualDJ schreibt die Datei selbst; für Serato, Traktor oder Rekordbox z. B. „What's Now Playing“ eine Textdatei schreiben lassen.</p>
+            <p class="show-hint">„Dieser Rechner“ = der Laptop, auf dem die Wall of Content läuft: Spotify, Apple Music und Musik im Browser
+              (Spotify Web, YouTube Music, SoundCloud …). Linux: funktioniert direkt (Server im Desktop-Terminal starten). Mac: beim ersten Mal
+              fragt macOS, ob das Terminal Spotify/Musik/den Browser steuern darf – „OK“ klicken. DJ-Software: VirtualDJ schreibt die Datei selbst;
+              für Serato, Traktor oder Rekordbox z. B. „What's Now Playing“ eine Textdatei schreiben lassen.</p>
           </div>
           <div class="card show-card">
             <h2>📀 DVD-Logo</h2>

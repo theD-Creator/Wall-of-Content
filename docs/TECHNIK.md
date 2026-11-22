@@ -33,7 +33,7 @@ Für alle, die die Wall of Content betreiben, anpassen oder weiterentwickeln. Di
 | `lib/pack.js`, `lib/zip.js` | Paket teilen: komplette Wall of Content als ZIP (eigener ZIP-Schreiber mit ZIP64, ohne Zusatzpakete) |
 | `lib/portal.js` | Besucher-App: Besucherprofile, Live-Programm, Challenges, Merch-Shop mit Coupons, Feedback |
 | `lib/moments.js` | Live-Modus: Moments der Redaktion (`/live`, Upload, Vorschaubild, eigene Moments) |
-| `lib/nowplaying.js` | „Läuft gerade“: Song aus Spotify/Apple Music (macOS, `osascript`) oder aus der Textdatei einer DJ-Software |
+| `lib/nowplaying.js`, `lib/nowplaying-system.js` | „Läuft gerade“: Song von diesem Rechner (Linux: MPRIS per `playerctl`/`gdbus`; macOS: Spotify/Musik per `osascript`, `nowplaying-cli`, Browser-Tabs; Windows: Medien-Sitzungen per PowerShell), aus der Textdatei einer DJ-Software oder von Hand |
 | `lib/rtmp.js`, `lib/obs.js` | OBS-Livestream: eigener RTMP-Empfänger (Port 1935, Stream-Key), Weitergabe als HTTP-FLV an die Wall |
 | `lib/datadir.js` | Datenordner bestimmen (`~/Wall of Content Daten`), alte Installationen finden und automatisch übernehmen |
 | `lib/backup.js`, `lib/unzip.js` | Sicherung als ZIP herunterladen/einspielen, Übernahme aus altem Ordner; eigener ZIP-Leser (ZIP64, Deflate) |
@@ -255,9 +255,14 @@ dadurch bleibt das klassische Aussehen unverändert. Die Schriften kommen aus `@
 Raster „Alle Inhalte“ (z-index unter dem Viewer, schließt nach 45 s ohne Berührung). `feature(item)` setzt einen Inhalt
 auf Befehl `stage` auf die Bühne bzw. in die große Mosaik-Kachel.
 
-**Läuft gerade** (`lib/nowplaying.js`). Alle 3 s: Auf macOS prüft `pgrep -x Spotify|Music`, ob die App läuft, dann liest
-`osascript` Zustand, Titel, Interpret, Album (Spotify zusätzlich die Cover-URL, die der Server lädt – nur von Spotify-CDNs;
-Apple Music schreibt das Cover per AppleScript in `<Daten>/.cover-music`). Ohne spielende App wird die DJ-Datei gelesen
+**Läuft gerade** (`lib/nowplaying.js`, `lib/nowplaying-system.js`). Alle 3 s werden die Player dieses Rechners abgefragt:
+Linux über MPRIS (`playerctl -a metadata`, sonst `gdbus` auf dem Session-Bus: `ListNames`, dann `PlaybackStatus` und
+`Metadata` je `org.mpris.MediaPlayer2.*`); Browser liefern dort die Media-Session-Daten von Spotify Web/YouTube Music, das
+Cover als `file:///tmp/…` (wird nur aus Temp-/Home-Ordnern gelesen) oder https-URL. macOS: `pgrep` + `osascript` für
+Spotify/Musik (Musik schreibt das Cover nach `<Daten>/.cover-music`), `nowplaying-cli`, Tabs der Browser mit
+Musikseiten (Titel wie „Titel • Interpret“). Windows: GlobalSystemMediaTransportControls per PowerShell. Spielende
+Musik-Apps gewinnen vor Browsern. Cover-Downloads nur von Spotify-, YouTube-/Google-, SoundCloud- und Deezer-CDNs
+(Weiterleitungen werden mitgeprüft); ausgeliefert wird nur, was nach JPEG, PNG oder WebP aussieht. Ohne spielende App wird die DJ-Datei gelesen
 (letzte sinnvolle Zeile der letzten 16 KB, Zeitstempel wie „21:03 :“ und Dateipfade werden entfernt, „Interpret - Titel“
 wird getrennt; älter als 45 min = nichts). Änderungen gehen als Live-Ereignis `nowplaying` mit Versionsnummer `v` an die
 Wall; `/api/state` liefert `nowPlaying` und `nowPlayingV`, die Wall nimmt immer die neuere Meldung. Erst der Titel, das

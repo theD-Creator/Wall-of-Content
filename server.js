@@ -133,7 +133,8 @@ const SETTINGS = {
   momentTags: { type: 'string', max: 400, def: '#UrbanArtNight #tecspaze #Backstage #Live #Graffiti' },
   // „Läuft gerade“: Songtitel mit drehender Schallplatte auf der Wall (lib/nowplaying.js)
   nowPlaying: { type: 'bool', def: false },
-  nowPlayingSource: { type: 'enum', values: ['auto', 'mac', 'datei'], def: 'auto' },
+  nowPlayingSource: { type: 'enum', values: ['auto', 'mac', 'datei', 'manuell'], def: 'auto' },
+  nowPlayingManual: { type: 'string', max: 200, def: '' },
   nowPlayingFile: { type: 'string', max: 500, def: '' },
   // OBS-Livestream auf der Wall (lib/obs.js, lib/rtmp.js)
   obsShow: { type: 'bool', def: true },
@@ -832,7 +833,7 @@ app.put('/api/admin/settings', requireAdmin, async (req, res) => {
   settingsVersion = Date.now();
   save();
   broadcast('settings');
-  if (['nowPlaying', 'nowPlayingSource', 'nowPlayingFile'].some((k) => k in patch)) setTimeout(() => nowPlaying.poll(), 20);
+  if (['nowPlaying', 'nowPlayingSource', 'nowPlayingFile', 'nowPlayingManual'].some((k) => k in patch)) setTimeout(() => nowPlaying.poll(), 20);
   res.json({ settings: db.settings });
 });
 
