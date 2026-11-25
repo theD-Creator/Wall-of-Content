@@ -280,6 +280,12 @@ spielt es mit `mpegts.js` (Apache-2.0, `/vendor/mpegts.js`) mit Latenz-Nachführ
 starten als Standbild. Ein Abgleich alle 1,5 s tauscht sichtbare Standbilder gegen stumm laufende Videos (höchstens 4,
 auf iOS 2) und unsichtbare/entfernte Videos zurück. Während der Viewer offen ist oder das DVD-Logo läuft, pausieren alle.
 
+**Schwebende Kacheln im neuen Design.** `wallLayout: "schweben"` (Standard) mountet kein Layout; `wall.js` nutzt die
+Physik der klassischen Wall, `neu.css` gestaltet sie über `html[data-design="neu"] body.wall:not(.layout-on)`. Das
+Aufleuchten beim Zusammenstoß ist ein `.bubble::after` mit `will-change: opacity`, das nur seine Deckkraft ändert
+(kompositor-only); vorher animierte die Klasse `bump` `box-shadow` und `border-color` der Kachel und löste damit fast alle
+Neuzeichnungen der Wall aus.
+
 **Wall-Layouts** (`public/js/wall-layouts.js`). Im Design „neu“ übergibt `wall.js` die Inhalte an ein Layout
 (`wallLayout`: `buehne`, `mosaik`, `wechsel`) statt an die Physik. Ein Layout bekommt `update(items, {fresh})`,
 `settings(settings, program, logo)`, `pause(on)` (während der Viewer offen ist) und `destroy()`. Viewer, Sieger,

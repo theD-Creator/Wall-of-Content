@@ -144,7 +144,14 @@ body.wall.idle, body.wall.idle * { cursor: none !important; }
 
 /* Video-Hintergrund, Stoß-Effekt, Quiz-Rangliste auf der Wall */
 .wall-bg video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.bubble.bump .bubble-inner { border-color: var(--accent); box-shadow: 0 0 34px var(--accent); transition-duration: .05s; }
+/* Aufleuchten beim Zusammenstoß: eigene Ebene, nur die Deckkraft ändert sich – die Grafikkarte blendet sie ein,
+   statt Schatten und Rahmen jedes Mal neu zu zeichnen (das kostete vorher fast die ganze Zeichenarbeit der Wall) */
+.bubble::after {
+  content: ""; position: absolute; inset: 0; border-radius: 12% / 12%; pointer-events: none;
+  box-shadow: 0 0 34px var(--accent), inset 0 0 0 3px var(--accent); opacity: 0; transition: opacity .3s ease-out; will-change: opacity;
+}
+.bubble.bump::after { opacity: 1; transition-duration: .05s; }
+.bubble.leaving::after { display: none; }
 .board { position: fixed; right: 3vh; top: 3vh; z-index: 8; width: clamp(240px, 22vw, 420px); padding: 1.1rem 1.2rem; background: #000b; border: 2px solid #ffffff40;
   border-radius: 20px; backdrop-filter: blur(10px); box-shadow: 0 10px 40px #000a; animation: fade .4s; }
 .board h2 { font-size: clamp(1.1rem, 2.4vh, 1.8rem); margin: 0 0 .6rem; }

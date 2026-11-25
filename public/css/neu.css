@@ -535,3 +535,39 @@ html[data-design="neu"] body.wall .obs-badge { font-family: var(--font-display);
 html[data-design="neu"] body.wall .obs-live.in-stage { border-radius: 32px; }
 html[data-design="neu"] body.wall.layout-on .obs-live.pip { top: 18vh; right: 2.4vw; width: 26vw; border-radius: 26px; }
 html[data-design="neu"] body.admin .status.live, html[data-design="neu"] body.admin .live-badge { background: #e53935; color: #fff; }
+
+/* ============================== Schwebende Kacheln im neuen Look ==============================
+   Layout „schweben“: das bewährte Prinzip der klassischen Wall (Kacheln mit Physik), aber mit runden Ecken,
+   Outfit/DM Sans und den Farben des neuen Designs. */
+html[data-design="neu"] body.wall:not(.layout-on) .wall-head { inset: 3.2vh 0 auto; text-shadow: 0 4px 30px #000d; }
+html[data-design="neu"] body.wall:not(.layout-on) .wall-head::before {
+  content: "✦ Wall of Content"; display: block; margin-bottom: 1.2vh;
+  font: 800 clamp(.7rem, 1.5vh, 1.25rem)/1 var(--font-body); letter-spacing: .24em; text-transform: uppercase; color: var(--n-lime);
+}
+html[data-design="neu"] body.wall:not(.layout-on) .wall-head h1 {
+  font: 800 clamp(1.8rem, min(7vh, 5.4vw), 6.4rem)/.95 var(--font-display); letter-spacing: -.02em; text-transform: uppercase;
+}
+html[data-design="neu"] body.wall:not(.layout-on) .wall-head p { font: 500 clamp(.9rem, 2.2vh, 1.9rem) var(--font-body); opacity: .85; margin-top: .8vh; }
+
+html[data-design="neu"] body.wall .bubble-inner {
+  border-radius: 26px; border: 0; background: var(--n-ink);
+  box-shadow: 0 0 0 2px #ffffff3d, 0 18px 50px #000b;
+}
+html[data-design="neu"] body.wall .bubble::after { border-radius: 26px; box-shadow: 0 0 36px var(--accent), inset 0 0 0 3px var(--accent); }
+html[data-design="neu"] body.wall .bubble:hover .bubble-inner,
+html[data-design="neu"] body.wall .bubble:active .bubble-inner { transform: scale(1.1); box-shadow: 0 0 0 3px var(--n-lime), 0 22px 60px #000c; }
+html[data-design="neu"] body.wall .bubble.fresh .bubble-inner { box-shadow: 0 0 0 3px var(--n-lime), 0 18px 50px #000b; }
+html[data-design="neu"] body.wall .bubble-new {
+  top: 8%; left: 8%; padding: .35em .75em; background: var(--n-lime); color: var(--n-black);
+  font: 800 clamp(.6rem, 1.2vh, .95rem)/1 var(--font-body); letter-spacing: .08em; text-transform: uppercase;
+}
+html[data-design="neu"] body.wall .bubble-play { background: var(--n-black); width: 2.4em; height: 2.4em; }
+
+/* QR-Codes, Rangliste und Hinweis bei den schwebenden Kacheln */
+html[data-design="neu"] body.wall:not(.layout-on) .hunt-qr { background: var(--n-black); border: 0; border-radius: 22px; box-shadow: 0 12px 40px #000a; padding: .55rem; }
+html[data-design="neu"] body.wall:not(.layout-on) .hunt-qr img { border-radius: 12px; }
+html[data-design="neu"] body.wall:not(.layout-on) .hunt-qr b { font-family: var(--font-display); font-weight: 800; letter-spacing: .03em; }
+html[data-design="neu"] body.wall:not(.layout-on) .hunt-qr span { font-family: var(--font-body); }
+html[data-design="neu"] body.wall:not(.layout-on) .board { font-family: var(--font-body); border-radius: 26px; border: 0; background: #0b0b0fe6; }
+html[data-design="neu"] body.wall:not(.layout-on) .board h2 { font-family: var(--font-display); text-transform: uppercase; }
+html[data-design="neu"] body.wall:not(.layout-on) .wall-empty { font-family: var(--font-display); font-weight: 700; }

@@ -89,7 +89,7 @@
           <div class="card show-card">
             <h2>🖼️ Wall</h2>
             <label class="show-row"><span>Design</span><select data-show="design"><option value="neu">✨ Neu</option><option value="klassisch">Klassisch</option></select></label>
-            <label class="show-row"><span>Layout</span><select data-show="wallLayout"><option value="buehne">Bühne</option><option value="mosaik">Mosaik</option><option value="wechsel">Bühne ⇄ Mosaik im Wechsel</option></select></label>
+            <label class="show-row"><span>Layout</span><select data-show="wallLayout"><option value="schweben">Schwebende Kacheln</option><option value="buehne">Bühne</option><option value="mosaik">Mosaik</option><option value="wechsel">Bühne ⇄ Mosaik im Wechsel</option></select></label>
             <label class="show-row"><span>Bühne wechselt alle</span><input type="range" min="4" max="60" step="1" data-show="stageSeconds" data-unit=" s"><output></output></label>
             <label class="show-row"><span>Titel</span><input data-show="title" maxlength="80"></label>
             <label class="show-row"><span>Untertitel</span><input data-show="subtitle" maxlength="160"></label>
@@ -580,7 +580,7 @@
         <form id="settingsForm" class="settings">
           <fieldset><legend>Design</legend>
             <label>Design<select name="design"><option value="neu">✨ Neu – Bühne/Mosaik, neues Admin-Panel</option><option value="klassisch">Klassisch – schwebende Kacheln, bisheriges Aussehen</option></select></label>
-            <label>Wall-Layout (Design „Neu“)<select name="wallLayout"><option value="buehne">Bühne – großes Highlight, neueste Inhalte, Programm</option><option value="mosaik">Mosaik – bildschirmfüllendes Raster</option><option value="wechsel">Bühne ⇄ Mosaik im Wechsel</option></select></label>
+            <label>Wall-Layout (Design „Neu“)<select name="wallLayout"><option value="schweben">Schwebende Kacheln – das bewährte Prinzip im neuen Look</option><option value="buehne">Bühne – großes Highlight, neueste Inhalte, Programm</option><option value="mosaik">Mosaik – bildschirmfüllendes Raster</option><option value="wechsel">Bühne ⇄ Mosaik im Wechsel</option></select></label>
             <label>Bühne wechselt alle (Sekunden)<input name="stageSeconds" type="number" min="4" max="60"></label>
             <label>Wechsel Bühne/Mosaik alle (Minuten)<input name="layoutMinutes" type="number" min="1" max="60"></label>
             <p class="muted small">Das Design gilt sofort für die Wall und das Admin-Panel. Einzelne Geräte lassen sich per Adresse umschalten, z. B. <code>/?design=klassisch</code> oder <code>/admin?design=neu</code>.</p>

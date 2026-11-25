@@ -459,7 +459,8 @@
   let serverOffset = 0;
   function applyLayout() {
     const design = applyDesign(settings);
-    const kind = gridMode || design !== 'neu' || !window.WallLayouts ? '' : (settings.wallLayout || 'buehne');
+    // „schweben“: schwebende Kacheln (klassisches Prinzip) im neuen Look – also kein Bühne/Mosaik-Layout
+    const kind = gridMode || design !== 'neu' || !window.WallLayouts || settings.wallLayout === 'schweben' ? '' : (settings.wallLayout || 'buehne');
     if (kind !== layoutKind) {
       if (layout) { layout.destroy(); layout = null; }
       layoutKind = kind;

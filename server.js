@@ -119,7 +119,8 @@ const SETTINGS = {
   dvdSpeed: { type: 'num', min: 0.2, max: 5, def: 1 },
   // Design: „neu“ (Bühne/Mosaik, neues Admin-Panel) oder „klassisch“ (schwebende Kacheln, bisheriges Aussehen)
   design: { type: 'enum', values: ['neu', 'klassisch'], def: 'neu' },
-  wallLayout: { type: 'enum', values: ['buehne', 'mosaik', 'wechsel'], def: 'buehne' },
+  // „schweben“ = klassisches Prinzip (schwebende Kacheln mit Physik) im Look des neuen Designs
+  wallLayout: { type: 'enum', values: ['schweben', 'buehne', 'mosaik', 'wechsel'], def: 'schweben' },
   stageSeconds: { type: 'int', min: 4, max: 60, def: 9 },
   layoutMinutes: { type: 'int', min: 1, max: 60, def: 4 },
   // Bühne: „alle“ = alle Inhalte zufällig (angepinnte öfter), „playlist“ = nur angepinnte in fester Reihenfolge

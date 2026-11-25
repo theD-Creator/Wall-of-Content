@@ -179,8 +179,18 @@ Admin-Panel – niemand muss etwas neu laden.
 
 | Design | Wall | Admin-Panel |
 |---|---|---|
-| **✨ Neu** (Standard) | **Bühne**, **Mosaik** oder beides im Wechsel | hell, Seitenleiste mit Bereichen, große Überschriften |
-| **Klassisch** | schwebende Kacheln wie bisher | dunkel, Reiter oben – wie bisher |
+| **✨ Neu** (Standard) | **Schwebende Kacheln** (Standard), **Bühne**, **Mosaik** oder Bühne ⇄ Mosaik im Wechsel | hell, Seitenleiste mit Bereichen, große Überschriften |
+| **Klassisch** | schwebende Kacheln im alten Look | dunkel, Reiter oben – wie bisher |
+
+**Neues Admin-Panel, aber die bewährte Wall:** Design „Neu“ mit dem Layout **Schwebende Kacheln** (Show-Modus → Wall →
+Layout). Die Kacheln schweben und stoßen sich ab wie immer, nur mit runden Ecken, den Schriften Outfit und DM Sans und den
+Farben des neuen Designs.
+
+![Schwebende Kacheln im neuen Look](screenshots/wall-schweben.jpg)
+
+**Schneller:** Beim Zusammenstoß leuchten die Kacheln jetzt über eine eigene Ebene auf, die die Grafikkarte nur ein- und
+ausblendet. Vorher wurden Schatten und Rahmen bei jedem Aufleuchten neu gezeichnet – das war fast die gesamte
+Zeichenarbeit der Wall (gemessen: rund 1.500 statt jetzt etwa 12 Neuzeichnungen in 10 Sekunden). Das gilt für beide Designs.
 
 Einzelne Geräte kannst du per Adresse umschalten, egal was eingestellt ist: `http://<laptop-ip>:3000/?design=klassisch`
 bzw. `?design=neu` (geht auch beim Admin-Panel: `/admin?design=klassisch`).

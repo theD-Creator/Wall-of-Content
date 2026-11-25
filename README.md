@@ -1,8 +1,8 @@
 # Wall of Content
 
-✨ **Zwei Designs:** „Neu“ (Wall als **Bühne** oder **Mosaik**, helles Admin-Panel mit Seitenleiste, Schriften Outfit +
-DM Sans) und „Klassisch“ (schwebende Kacheln, dunkles Admin-Panel). Umschalten unter Einstellungen → Design oder pro
-Gerät mit `?design=klassisch`.
+✨ **Zwei Designs:** „Neu“ (helles Admin-Panel mit Seitenleiste, Schriften Outfit + DM Sans; Wall als **schwebende Kacheln**
+im neuen Look, **Bühne** oder **Mosaik**) und „Klassisch“ (alter Look für Wall und Admin-Panel). Umschalten unter
+Einstellungen → Design oder pro Gerät mit `?design=klassisch`.
 
 📖 **Dokumentation**
 
