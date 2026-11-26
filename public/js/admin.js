@@ -59,6 +59,20 @@
       $('#loginError').textContent = err.message;
     }
   });
+  $('#forgotPw').addEventListener('click', async () => {
+    const master = prompt('Master-Passwort eingeben – damit wird das Passwort des Global Admins zurückgesetzt:');
+    if (!master) return;
+    const next = prompt('Neues Passwort für den Global Admin (mindestens 6 Zeichen):');
+    if (!next) return;
+    try {
+      const r = await api('/api/admin/reset-password', { method: 'POST', json: { master, next } });
+      loginUser = r.user.id;
+      await showLogin();
+      $('#loginError').textContent = `Passwort von ${r.user.name} wurde zurückgesetzt. Jetzt mit dem neuen Passwort anmelden.`;
+    } catch (err) {
+      $('#loginError').textContent = err.message;
+    }
+  });
   $('#logout').addEventListener('click', async () => {
     await api('/api/admin/logout', { method: 'POST' }).catch(() => {});
     showLogin();

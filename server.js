@@ -717,6 +717,22 @@ function setPassword(user, password) {
   save();
 }
 
+// Passwort vergessen: mit dem Master-Passwort wird das Passwort des Global Admins neu gesetzt.
+// Im Code steht nur der scrypt-Hash; mit MASTER_PASSWORD lässt sich ein eigenes Master-Passwort festlegen.
+const MASTER = process.env.MASTER_PASSWORD ? hashPassword(process.env.MASTER_PASSWORD)
+  : { salt: 'ec3f176f667047a9ad8750b4f066218d', hash: '36158361b6ce36dfc0bf125895c4978b45abc17090b4d9b99b70b1ebac59ac03' };
+app.post('/api/admin/reset-password', (req, res) => {
+  if (!sameOrigin(req)) return res.status(403).json({ error: 'Ungültige Herkunft' });
+  if (!rateLimit('reset:' + req.socket.remoteAddress, 5, 15 * 60_000)) return res.status(429).json({ error: 'Zu viele Versuche. Bitte später erneut probieren.' });
+  const { master, next } = req.body || {};
+  if (!checkPassword({ pass: MASTER }, master)) return res.status(403).json({ error: 'Master-Passwort ist falsch' });
+  if (!validPassword(next)) return res.status(400).json({ error: 'Das neue Passwort muss 6 bis 100 Zeichen lang sein' });
+  const g = globalAdmin();
+  setPassword(g, next);
+  dropSessions(g.id);
+  res.json({ ok: true, user: publicUser(g) });
+});
+
 // Eigenes Passwort ändern
 app.post('/api/admin/password', requireEditor, (req, res) => {
   if (!rateLimit('pw:' + req.socket.remoteAddress, 10, 10 * 60_000)) return res.status(429).json({ error: 'Zu viele Versuche' });
