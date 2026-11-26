@@ -112,6 +112,8 @@ const SETTINGS = {
   qrSize: { type: 'int', min: 50, max: 200, def: 100 },
   autoFullscreen: { type: 'bool', def: false },
   viewerQr: { type: 'bool', def: true },
+  viewerTitle: { type: 'bool', def: true }, // Datei-/Fotoname im Viewer zeigen
+  huntOnWall: { type: 'bool', def: true }, // Color-Hunt-Fotos als Bubbles auf der Wall
   // DVD-Logo-Bildschirmschoner auf der Wall
   dvdMode: { type: 'bool', def: false },
   dvdCorners: { type: 'bool', def: false },
@@ -573,8 +575,21 @@ function logoUrl() {
   return null;
 }
 
+/** Color-Hunt-Fotos als Bubbles: mit Label „Color Hunt“ und Namen der Person (nur wenn die Einstellung an ist). */
+function huntWallItems() {
+  if (!db.settings.huntOnWall) return [];
+  const out = [];
+  for (const p of db.hunt.players) {
+    p.photos.forEach((f, slot) => {
+      if (!f) return;
+      out.push({ id: `hunt-${p.id}-${slot}`, kind: 'photo', url: itemUrl(f), thumb: null, title: '', createdAt: (p.startedAt || 0) + slot,
+        ratio: null, pin: false, order: null, stageHide: false, moment: null, hunt: { by: p.name, color: p.color && p.color.name } });
+    });
+  }
+  return out;
+}
 app.get('/api/wall', (_req, res) => {
-  res.json({ items: db.items.filter((i) => i.onWall).map(publicItem) });
+  res.json({ items: [...db.items.filter((i) => i.onWall).map(publicItem), ...huntWallItems()] });
 });
 
 app.get('/api/events', (req, res) => {
@@ -850,6 +865,7 @@ app.put('/api/admin/settings', requireAdmin, async (req, res) => {
   settingsVersion = Date.now();
   save();
   broadcast('settings');
+  if ('huntOnWall' in patch) broadcast('items', {});
   if (['nowPlaying', 'nowPlayingSource', 'nowPlayingFile', 'nowPlayingManual'].some((k) => k in patch)) setTimeout(() => nowPlaying.poll(), 20);
   res.json({ settings: db.settings });
 });
@@ -1046,7 +1062,7 @@ function playerView(p) {
     startedAt: p.startedAt, deadline: p.deadline, status: huntStatus(p), photos: huntPhotoUrls(p),
   };
 }
-const huntChanged = () => { save(); broadcast('hunt', {}, ['wall', 'admin']); };
+const huntChanged = () => { save(); broadcast('hunt', {}, ['wall', 'admin']); if (db.settings.huntOnWall) broadcast('items', {}); };
 async function removeHuntPlayer(p) {
   db.hunt.players = db.hunt.players.filter((x) => x !== p);
   for (const f of p.photos) if (f) await fsp.rm(path.join(UPLOADS, f), { force: true });

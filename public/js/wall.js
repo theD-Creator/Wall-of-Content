@@ -300,7 +300,8 @@
         el('span', { class: 'bubble-inner' },
           media,
           item.kind === 'video' && el('span', { class: 'bubble-play', text: '▶' }),
-          fresh && el('span', { class: 'bubble-new', text: 'NEU' })));
+          fresh && el('span', { class: 'bubble-new', text: 'NEU' }),
+          item.hunt && el('span', { class: 'bubble-hunt', text: 'Color Hunt' })));
       this.el.style.width = this.w + 'px';
       this.el.style.height = this.h + 'px';
       this.el.addEventListener('click', () => openViewer(item));
@@ -638,12 +639,12 @@
     viewerSound.hidden = true;
     viewerSound.textContent = '🔇 Tippen für Ton';
     viewerSpin.hidden = true;
-    $('#viewerTitle').textContent = item.title || '';
+    $('#viewerTitle').textContent = item.hunt ? `Color Hunt · von ${item.hunt.by}` : settings.viewerTitle === false ? '' : item.title || '';
     viewerBar.style.transition = 'none';
     viewerBar.style.width = '0%';
 
     const qr = $('#viewerQr');
-    qr.hidden = !settings.viewerQr || gridMode;
+    qr.hidden = !settings.viewerQr || gridMode || !!item.hunt;
     if (!qr.hidden) $('img', qr).src = `/api/items/${encodeURIComponent(item.id)}/qr.svg`;
 
     if (item.kind === 'video') {

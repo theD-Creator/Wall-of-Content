@@ -879,3 +879,8 @@ body.wall.obs-on .wall-empty { display: none; }
 .copy-row { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-top: .3rem; }
 .copy-row code { font-size: .95rem; padding: .35em .6em; overflow-wrap: anywhere; }
 .show-row select { min-width: 0; max-width: 62%; text-overflow: ellipsis; }
+
+/* Color-Hunt-Fotos auf der Wall */
+.bubble-hunt { position: absolute; top: 6%; right: 6%; padding: .2em .65em; border-radius: 999px; font-weight: 800; font-size: .72rem; color: #fff;
+  background: linear-gradient(90deg, #ff3b6b, #ffb000, #2ecc71, #3b82f6, #a855f7); box-shadow: 0 2px 8px rgba(0,0,0,.35); pointer-events: none; }
+.hunt-realname { margin: .2rem 0 .6rem; padding: .55rem .8rem; border-radius: 12px; background: rgba(255,200,0,.14); border: 1px solid rgba(255,200,0,.45); font-size: .92rem; }

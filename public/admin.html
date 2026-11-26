@@ -85,6 +85,8 @@
             <div class="show-row"><span>Quiz-Rangliste auf der Wall</span><label class="switch"><input type="checkbox" data-show-special="board"><span></span></label></div>
             <div class="show-row"><span>QR-Code Besucher-App auf der Wall</span><label class="switch"><input type="checkbox" data-show="portalQr"><span></span></label></div>
             <div class="show-row"><span>QR-Code zum Mitnehmen im Viewer</span><label class="switch"><input type="checkbox" data-show="viewerQr"><span></span></label></div>
+            <div class="show-row"><span>Dateiname im Viewer anzeigen</span><label class="switch"><input type="checkbox" data-show="viewerTitle"><span></span></label></div>
+            <div class="show-row"><span>Color-Hunt-Fotos als Bubbles</span><label class="switch"><input type="checkbox" data-show="huntOnWall"><span></span></label></div>
             <div class="show-row"><span>Fotos erst nach Freigabe</span><label class="switch"><input type="checkbox" data-show="moderation"><span></span></label></div>
           </div>
           <div class="card show-card">
@@ -595,6 +597,8 @@
             <label>Geschwindigkeit<input name="speed" type="range" min="0" max="5" step="0.1"><output></output></label>
             <label>Anzeigedauer Bilder (s)<input name="imageDuration" type="number" min="2" max="120"></label>
             <label class="switch"><input name="videoSound" type="checkbox"><span></span> Videos mit Ton abspielen</label>
+            <label class="switch"><input name="viewerTitle" type="checkbox"><span></span> Foto-/Dateinamen beim Antippen anzeigen</label>
+            <label class="switch"><input name="huntOnWall" type="checkbox"><span></span> Color-Hunt-Fotos als Bubbles auf der Wall (mit Name)</label>
           </fieldset>
           <fieldset><legend>Fotostation</legend>
             <label>Titel<input name="stationTitle" maxlength="80"></label>

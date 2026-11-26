@@ -571,3 +571,7 @@ html[data-design="neu"] body.wall:not(.layout-on) .hunt-qr span { font-family: v
 html[data-design="neu"] body.wall:not(.layout-on) .board { font-family: var(--font-body); border-radius: 26px; border: 0; background: #0b0b0fe6; }
 html[data-design="neu"] body.wall:not(.layout-on) .board h2 { font-family: var(--font-display); text-transform: uppercase; }
 html[data-design="neu"] body.wall:not(.layout-on) .wall-empty { font-family: var(--font-display); font-weight: 700; }
+html[data-design="neu"] body.wall .bubble-hunt {
+  top: 8%; right: 8%; padding: .35em .75em;
+  font: 800 clamp(.6rem, 1.2vh, .95rem)/1 var(--font-body); letter-spacing: .08em; text-transform: uppercase;
+}
