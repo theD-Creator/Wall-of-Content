@@ -18,6 +18,7 @@ const https = require('https');
 const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
+const video = require('./lib/video');
 const crypto = require('crypto');
 const os = require('os');
 const { pipeline } = require('stream/promises');
@@ -438,7 +439,7 @@ async function listAssets(kind) {
 
 const itemUrl = (file) => (file ? `/media/${file}` : null);
 const publicItem = (i) => ({
-  id: i.id, kind: i.kind, url: i.asset ? `/assets/media/${encodeURIComponent(i.asset)}` : itemUrl(i.file), thumb: itemUrl(i.thumb), title: i.title || '', createdAt: i.createdAt, ratio: i.ratio || null,
+  id: i.id, kind: i.kind, url: i.web ? itemUrl(i.web) : i.asset ? `/assets/media/${encodeURIComponent(i.asset)}` : itemUrl(i.file), thumb: itemUrl(i.thumb), title: i.title || '', createdAt: i.createdAt, ratio: i.ratio || null,
   // Bühne: angepinnt (mit Reihenfolge) oder für die Bühne ausgeblendet
   pin: !!i.stagePin, order: i.stageOrder ?? null, stageHide: !!i.stageHide,
   moment: i.moment ? { by: i.moment.by, avatar: i.moment.avatar || null, caption: i.moment.caption || '', tags: i.moment.tags || [], at: i.moment.at } : null,
@@ -447,9 +448,44 @@ const adminItem = (i) => ({ ...publicItem(i), onWall: !!i.onWall, shared: i.shar
 
 async function deleteItem(item) {
   db.items = db.items.filter((i) => i !== item);
-  for (const f of [item.file, item.thumb]) if (f) await fsp.rm(path.join(UPLOADS, f), { force: true });
+  for (const f of [item.file, item.thumb, item.web]) if (f) await fsp.rm(path.join(UPLOADS, f), { force: true });
   if (item.asset) for (const d of MEDIA_DIRS) await fsp.rm(path.join(d, item.asset), { force: true });
   save();
+}
+
+/* Videos aufbereiten: richtiges Seitenverhältnis + schnell ladbare Fassung (siehe lib/video.js) */
+const videoQueue = [];
+let videoBusy = false;
+function queueVideos() {
+  for (const i of db.items) if (i.kind === 'video' && !i.webDone && !videoQueue.includes(i.id)) videoQueue.push(i.id);
+  for (const i of db.items) if (!i.ratio && i.thumb) { // ältere Inhalte: Format aus dem Vorschaubild
+    try { const r = video.jpegRatio(fs.readFileSync(path.join(UPLOADS, i.thumb))); if (r) { i.ratio = r; save(); } } catch { /* fehlt */ }
+  }
+  processVideos();
+}
+async function processVideos() {
+  if (videoBusy) return;
+  videoBusy = true;
+  try {
+    while (videoQueue.length) {
+      const item = db.items.find((i) => i.id === videoQueue[0]);
+      if (item && !item.webDone) {
+        const src = itemFilePath(item);
+        const ratio = await video.videoRatio(src).catch(() => null);
+        const web = `web-${item.id}.mp4`;
+        const made = await video.webVersion(src, path.join(UPLOADS, web)).catch(() => false);
+        if (db.items.includes(item)) {
+          if (ratio) item.ratio = ratio;
+          if (made) { if (item.web && item.web !== web) await fsp.rm(path.join(UPLOADS, item.web), { force: true }); item.web = web; }
+          item.webDone = true;
+          save();
+          broadcast('items');
+          if (made) console.log(`  Video für die Wall optimiert: ${item.title || item.asset || item.file}`);
+        } else if (made) await fsp.rm(path.join(UPLOADS, web), { force: true });
+      }
+      videoQueue.shift();
+    }
+  } finally { videoBusy = false; }
 }
 
 /** Gleicht den Ordner assets/media mit der Wall ab: neue Dateien erscheinen, gelöschte verschwinden. */
@@ -472,10 +508,11 @@ async function syncMediaFolder() {
   const gone = db.items.filter((i) => i.asset && !files.includes(i.asset));
   for (const item of gone) {
     db.items = db.items.filter((i) => i !== item);
-    if (item.thumb) await fsp.rm(path.join(UPLOADS, item.thumb), { force: true });
+    for (const f of [item.thumb, item.web]) if (f) await fsp.rm(path.join(UPLOADS, f), { force: true });
     changed = true;
   }
   if (changed) { save(); broadcast('items'); }
+  queueVideos();
 }
 
 /* ------------------------------------------------------------------ */
@@ -884,6 +921,7 @@ app.post('/api/admin/media', requireAdmin, async (req, res) => {
   db.items.push(item);
   save();
   broadcast('items', { added: id });
+  if (item.kind === 'video') queueVideos();
   res.status(201).json({ item: adminItem(item) });
 });
 
@@ -895,6 +933,7 @@ app.put('/api/admin/items/:id/thumb', requireAdmin, express.raw({ type: 'image/j
   const thumb = `thumb-${item.id}.jpg`;
   await fsp.writeFile(path.join(UPLOADS, thumb), buf);
   item.thumb = thumb;
+  if (item.kind !== 'photo') item.ratio = video.jpegRatio(buf) || item.ratio; // Vorschaubild zeigt das echte Format
   save();
   broadcast('items');
   res.json({ item: adminItem(item) });

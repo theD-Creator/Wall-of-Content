@@ -544,7 +544,7 @@
     for (const [id, b] of bubbles) {
       const item = byId.get(id);
       // entfernt, oder Vorschaubild hat sich geändert -> neu aufbauen
-      if (!item || item.thumb !== b.item.thumb) { b.remove(); bubbles.delete(id); }
+      if (!item || item.thumb !== b.item.thumb || item.ratio !== b.item.ratio || item.url !== b.item.url) { b.remove(); bubbles.delete(id); }
     }
     if (current && !byId.has(current.id)) closeViewer();
 
