@@ -293,7 +293,7 @@
       this.tilt = rand(1.5, 3.5);
       this.hover = false;
 
-      const media = item.kind === 'video'
+      const media = item.photos ? huntCollage(item) : item.kind === 'video'
         ? VideoPreview.make(item)
         : el('img', { src: item.thumb || item.url, alt: '', draggable: false, decoding: 'async' });
       this.el = el('button', { class: 'bubble' + (fresh ? ' fresh' : ''), 'aria-label': item.title || 'Inhalt öffnen' },
@@ -544,7 +544,7 @@
     for (const [id, b] of bubbles) {
       const item = byId.get(id);
       // entfernt, oder Vorschaubild hat sich geändert -> neu aufbauen
-      if (!item || item.thumb !== b.item.thumb || item.ratio !== b.item.ratio || item.url !== b.item.url) { b.remove(); bubbles.delete(id); }
+      if (!item || item.thumb !== b.item.thumb || item.ratio !== b.item.ratio || item.url !== b.item.url || String(item.photos) !== String(b.item.photos)) { b.remove(); bubbles.delete(id); }
     }
     if (current && !byId.has(current.id)) closeViewer();
 
@@ -639,7 +639,7 @@
     viewerSound.hidden = true;
     viewerSound.textContent = '🔇 Tippen für Ton';
     viewerSpin.hidden = true;
-    $('#viewerTitle').textContent = item.hunt ? `Color Hunt · von ${item.hunt.by}` : settings.viewerTitle === false ? '' : item.title || '';
+    $('#viewerTitle').textContent = item.title || ''; // Server blendet Dateinamen aus, wenn eingestellt
     viewerBar.style.transition = 'none';
     viewerBar.style.width = '0%';
 
@@ -689,7 +689,7 @@
       };
     } else {
       const secs = settings.imageDuration || 8;
-      const img = el('img', { src: item.url, alt: item.title || '' });
+      const img = item.photos ? huntCollage(item, 'big') : el('img', { src: item.url, alt: item.title || '' });
       img.onerror = () => { if (current === item) viewerError('Das Bild konnte nicht geladen werden.'); };
       viewerMedia.append(img);
       requestAnimationFrame(() => requestAnimationFrame(() => {

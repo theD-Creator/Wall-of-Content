@@ -616,17 +616,18 @@ function logoUrl() {
 function huntWallItems() {
   if (!db.settings.huntOnWall) return [];
   const out = [];
-  for (const p of db.hunt.players) {
-    p.photos.forEach((f, slot) => {
-      if (!f) return;
-      out.push({ id: `hunt-${p.id}-${slot}`, kind: 'photo', url: itemUrl(f), thumb: null, title: '', createdAt: (p.startedAt || 0) + slot,
-        ratio: null, pin: false, order: null, stageHide: false, moment: null, hunt: { by: p.name, color: p.color && p.color.name } });
-    });
+  for (const p of db.hunt.players) { // eine Kachel pro Person mit allen ihren Fotos
+    const photos = p.photos.filter(Boolean).map((f) => itemUrl(f));
+    if (!photos.length) continue;
+    out.push({ id: `hunt-${p.id}`, kind: 'image', url: photos[0], thumb: null, title: `Color Hunt · von ${p.name}`, createdAt: p.startedAt || 0,
+      ratio: 1, pin: false, order: null, stageHide: false, moment: null, photos,
+      hunt: { by: p.name, color: p.color && p.color.name, hex: p.color && p.color.hex } });
   }
   return out;
 }
 app.get('/api/wall', (_req, res) => {
-  res.json({ items: [...db.items.filter((i) => i.onWall).map(publicItem), ...huntWallItems()] });
+  const strip = db.settings.viewerTitle === false; // Dateinamen ausblenden – überall auf der Wall, nur Color-Hunt-Namen bleiben
+  res.json({ items: [...db.items.filter((i) => i.onWall).map(publicItem).map((i) => (strip ? { ...i, title: '' } : i)), ...huntWallItems()] });
 });
 
 app.get('/api/events', (req, res) => {
@@ -902,7 +903,7 @@ app.put('/api/admin/settings', requireAdmin, async (req, res) => {
   settingsVersion = Date.now();
   save();
   broadcast('settings');
-  if ('huntOnWall' in patch) broadcast('items', {});
+  if ('huntOnWall' in patch || 'viewerTitle' in patch) broadcast('items', {});
   if (['nowPlaying', 'nowPlayingSource', 'nowPlayingFile', 'nowPlayingManual'].some((k) => k in patch)) setTimeout(() => nowPlaying.poll(), 20);
   res.json({ settings: db.settings });
 });

@@ -259,7 +259,7 @@
         blurSrc && el('div', { class: 'lb-blur', style: `background-image:${cssUrl(blurSrc)}` }),
         m,
         item.moment ? momentCaption(item) : el('div', { class: 'lb-caption' },
-          el('span', { class: 'pill pill-kind', text: KIND[item.kind] || 'Inhalt' }),
+          el('span', { class: 'pill pill-kind', text: (item.hunt ? '🎨 Color Hunt' : KIND[item.kind]) || 'Inhalt' }),
           fresh && el('span', { class: 'pill pill-new', text: 'Neu' }),
           item.title && el('b', { text: item.title }),
           el('span', { class: 'lb-ago', text: ago(item.createdAt, ctx.now()) })));
@@ -303,7 +303,7 @@
         class: 'lb-card' + (fresh.includes(it.id) ? ' fresh' : ''), type: 'button',
         'aria-label': it.title || 'Inhalt öffnen', onclick: () => ctx.open(it),
       }, media(it, { preview: true }), el('span', { class: 'lb-card-meta' },
-        el('b', { text: (it.moment ? '📍 ' : '') + ((it.moment && it.moment.caption) || it.title || KIND[it.kind] || 'Inhalt') }),
+        el('b', { text: (it.moment ? '📍 ' : '') + ((it.moment && it.moment.caption) || it.title || (it.hunt ? '🎨 Color Hunt' : KIND[it.kind]) || 'Inhalt') }),
         el('small', { text: ago(it.createdAt, ctx.now()) })))));
       fitRail();
     }

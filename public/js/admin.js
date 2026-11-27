@@ -611,7 +611,7 @@
     thumbRunning = true;
     try {
       for (const item of data.items) {
-        if (item.thumb || item.kind === 'photo' || thumbTried.has(item.id)) continue;
+        if (item.thumb || thumbTried.has(item.id)) continue; // auch Fotos: kleine Vorschau statt Original in jeder Bubble
         thumbTried.add(item.id);
         const blob = await makeThumb(item.url, item.kind);
         if (blob) await api(`/api/admin/items/${item.id}/thumb`, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob }).catch(() => {});

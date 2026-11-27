@@ -233,3 +233,12 @@ const VideoPreview = {
   },
   pause(on) { this.paused = !!on; this.sweep(); },
 };
+
+/** Color Hunt: alle Fotos einer Person als eine Kachel (Collage). */
+function huntCollage(item, cls = '') {
+  const photos = item.photos || [item.url];
+  const cols = photos.length <= 1 ? 1 : photos.length <= 4 ? 2 : 3;
+  const box = el('span', { class: 'hunt-collage ' + cls, style: `--cols:${cols};--hunt-hex:${/^#[0-9a-f]{3,8}$/i.test(item.hunt && item.hunt.hex || '') ? item.hunt.hex : '#ff3b6b'}` });
+  for (const u of photos) box.append(el('img', { src: u, alt: '', draggable: false, decoding: 'async', loading: 'lazy' }));
+  return box;
+}
