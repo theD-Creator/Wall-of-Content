@@ -210,6 +210,7 @@ try {
   db.portal = raw.portal && typeof raw.portal === 'object' ? raw.portal : {};
   if (raw.obs && typeof raw.obs === 'object') db.obs = raw.obs; // Stream-Key für OBS
   db.items = Array.isArray(raw.items) ? raw.items : [];
+  db.chat = Array.isArray(raw.chat) ? raw.chat : []; // interner Team-Chat
   db.assets = { frames: {}, backgrounds: {}, ...(raw.assets || {}) };
 } catch (e) {
   if (e.code !== 'ENOENT') console.error('Konnte db.json nicht lesen, starte leer:', e.message);
@@ -1588,6 +1589,9 @@ require('./lib/moments')({
   app, express, getDb: () => db, save, broadcast, requireEditor, requireAdmin, newId, clean, normTags, saveStream,
   UPLOADS, MEDIA_TYPES, MAX_MEDIA, MAX_MEMORY, contentType, page, publicItem, adminItem, deleteItem,
 });
+
+// Interner Team-Chat (lib/chat.js)
+require('./lib/chat')({ app, express, getDb: () => db, save, broadcast, requireEditor, newId, rateLimit, page, publicUser });
 
 require('./lib/portal')({
   app, express, getDb: () => db, settings: () => db.settings, save, broadcast, requireAdmin, isAdmin, clean, newId, sha,

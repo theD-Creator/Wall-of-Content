@@ -890,3 +890,23 @@ body.wall.obs-on .wall-empty { display: none; }
 .hunt-collage.big img { border-radius: 10px; }
 .viewer-media .hunt-collage img { min-width: 0; max-width: none; max-height: none; }
 body.nosave img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-user-drag: none; }
+/* Team-Chat */
+.team-chat { display: flex; flex-direction: column; gap: .6rem; min-height: 0; }
+.chat-card .team-chat { height: min(68vh, 720px); }
+.chat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: .55rem; padding: .4rem .2rem; overscroll-behavior: contain; }
+.chat-msg { display: flex; gap: .5rem; align-items: flex-end; max-width: 82%; }
+.chat-msg.mine { margin-left: auto; flex-direction: row-reverse; }
+.chat-av { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex: none; display: grid; place-items: center; font-size: .75rem; font-weight: 800; background: #ffffff22; }
+.chat-bubble { background: rgba(127,127,127,.16); border-radius: 16px 16px 16px 4px; padding: .45rem .75rem; min-width: 0; }
+.chat-msg.mine .chat-bubble { background: var(--accent); color: #fff; border-radius: 16px 16px 4px 16px; }
+.chat-meta { display: flex; gap: .5rem; align-items: baseline; font-size: .75rem; opacity: .75; }
+.chat-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.35; }
+.chat-del { margin-left: auto; background: none; border: 0; color: inherit; cursor: pointer; font-size: 1rem; opacity: .6; padding: 0 .2rem; }
+.chat-form { display: flex; gap: .5rem; }
+.chat-form textarea { flex: 1; resize: none; min-height: 44px; max-height: 140px; font: inherit; padding: .6rem .8rem; border-radius: 14px; }
+.chat-empty { text-align: center; margin: auto; }
+body.chat-page { display: flex; flex-direction: column; height: 100dvh; margin: 0; padding: 0 16px max(12px, env(safe-area-inset-bottom)); box-sizing: border-box; }
+.chat-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; }
+.chat-page .team-chat { flex: 1; }
+.chat-login { padding: 1rem; }
+html[data-design="neu"] .chat-msg.mine .chat-bubble { background: var(--n-lime, var(--accent)); color: #000; }

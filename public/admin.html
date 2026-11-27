@@ -33,6 +33,7 @@
         <button data-tab="overview" data-icon="🏠">Übersicht</button>
         <button data-tab="stage" data-icon="🎭">Bühne</button>
         <button data-tab="obs" data-icon="📡">Livestream <span id="obsBadge" class="badge live-badge" hidden>LIVE</span></button>
+        <button data-tab="chat" data-icon="💬">Team-Chat <span id="chatBadge" class="badge" hidden></span></button>
         <button data-tab="moments" data-icon="📍">Moments <span id="momentBadge" class="badge" hidden></span></button>
         <span class="nav-group">Inhalte</span>
         <button data-tab="media" data-icon="🖼️">Inhalte</button>
@@ -311,6 +312,14 @@
             <div id="stageFilter" class="chips"></div>
           </div>
           <div id="stageItems" class="stage-grid"></div>
+        </div>
+      </section>
+
+      <section data-panel="chat" class="panel">
+        <div class="card chat-card">
+          <h2>💬 Team-Chat</h2>
+          <p class="muted small">Nur für Mitarbeiter-Konten sichtbar. Die Redaktion schreibt auf dem Handy unter <code>/chat</code> mit.</p>
+          <div id="teamChat" class="team-chat"></div>
         </div>
       </section>
 
@@ -683,5 +692,7 @@
   <script src="/js/admin-live.js"></script>
   <script src="/vendor/mpegts.js"></script>
   <script src="/js/admin-obs.js"></script>
+  <script src="/js/chat.js"></script>
+  <script src="/js/admin-chat.js"></script>
 </body>
 </html>
