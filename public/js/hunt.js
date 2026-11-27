@@ -58,6 +58,9 @@
     }
   }
   setInterval(updateEnds, 1000);
+  // Fotos nicht per langem Drücken/Rechtsklick speichern, wenn das abgeschaltet ist
+  document.addEventListener('contextmenu', (e) => { if (document.body.classList.contains('nosave') && e.target.tagName === 'IMG') e.preventDefault(); });
+  document.addEventListener('dragstart', (e) => { if (document.body.classList.contains('nosave') && e.target.tagName === 'IMG') e.preventDefault(); });
 
   // Regelmäßig nachfragen: hat der Admin den Countdown verlängert, verkürzt oder die Challenge geschlossen?
   setInterval(async () => {
@@ -218,6 +221,7 @@
       me = await api('/api/hunt/me');
       setTime(me.now);
       player = me.player;
+      document.body.classList.toggle('nosave', !me.download); // Speichern in den Einstellungen abschaltbar
       $('#eventTitle').textContent = me.title || '';
       document.title = 'Color Hunt – ' + (me.title || '');
       route();

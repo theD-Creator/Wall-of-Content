@@ -86,6 +86,8 @@
             <div class="show-row"><span>QR-Code Besucher-App auf der Wall</span><label class="switch"><input type="checkbox" data-show="portalQr"><span></span></label></div>
             <div class="show-row"><span>QR-Code zum Mitnehmen im Viewer</span><label class="switch"><input type="checkbox" data-show="viewerQr"><span></span></label></div>
             <div class="show-row"><span>Dateiname im Viewer anzeigen</span><label class="switch"><input type="checkbox" data-show="viewerTitle"><span></span></label></div>
+            <div class="show-row"><span>Fotostation-Fotos zum Download</span><label class="switch"><input type="checkbox" data-show="photoDownload"><span></span></label></div>
+            <div class="show-row"><span>Color-Hunt-Fotos speichern erlauben</span><label class="switch"><input type="checkbox" data-show="huntDownload"><span></span></label></div>
             <div class="show-row"><span>Color-Hunt-Fotos als Bubbles</span><label class="switch"><input type="checkbox" data-show="huntOnWall"><span></span></label></div>
             <div class="show-row"><span>Fotos erst nach Freigabe</span><label class="switch"><input type="checkbox" data-show="moderation"><span></span></label></div>
           </div>
@@ -604,6 +606,8 @@
             <label>Titel<input name="stationTitle" maxlength="80"></label>
             <label>Countdown (s)<input name="countdown" type="number" min="0" max="10"></label>
             <label>QR-Code anzeigen für (s)<input name="qrTimeout" type="number" min="10" max="600"></label>
+            <label class="switch"><input name="photoDownload" type="checkbox"><span></span> Fotos der Fotostation zum Download (QR-Code) anbieten</label>
+            <label class="switch"><input name="huntDownload" type="checkbox"><span></span> Color-Hunt-Fotos auf dem Handy speichern erlauben</label>
             <label class="switch"><input name="shareDefault" type="checkbox"><span></span> Haken „Auf der Wall anzeigen“ vorausgewählt</label>
             <label class="switch"><input name="moderation" type="checkbox"><span></span> Fotos erst nach Freigabe im Admin-Panel auf der Wall zeigen</label>
             <label>Fotos automatisch löschen nach Stunden (0 = nie)<input name="retentionHours" type="number" min="0" max="8760"></label>

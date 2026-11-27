@@ -106,6 +106,8 @@ const SETTINGS = {
   huntMinutes: { type: 'int', min: 1, max: 30, def: 5 },
   huntPhotos: { type: 'int', min: 1, max: 10, def: 5 },
   qrTimeout: { type: 'int', min: 10, max: 600, def: 60 },
+  photoDownload: { type: 'bool', def: false }, // Fotos der Fotostation per QR-Code herunterladen
+  huntDownload: { type: 'bool', def: false }, // Color-Hunt-Fotos auf dem Handy speichern
   retentionHours: { type: 'int', min: 0, max: 8760, def: 0 },
   publicUrl: { type: 'url', def: '' },
   // Show-Modus: Vorladen, QR-Größe, Vollbild, Teilen-QR im Viewer
@@ -674,14 +676,15 @@ app.post('/api/photos', express.raw({ type: 'image/jpeg', limit: MAX_PHOTO }), a
   save();
   broadcast('items', { added: item.onWall ? id : null });
   res.status(201).json({
-    id, url: itemUrl(file), page: `${publicBase(req)}/p/${id}`, qr: `/api/photos/${id}/qr.svg`,
+    id, url: itemUrl(file), download: db.settings.photoDownload,
+    page: db.settings.photoDownload ? `${publicBase(req)}/p/${id}` : null, qr: db.settings.photoDownload ? `/api/photos/${id}/qr.svg` : null,
     onWall: item.onWall, pending: shared && !item.onWall,
   });
 });
 
-const findPhoto = (id) => db.items.find((i) => i.id === id && i.kind === 'photo');
+const findPhoto = (id) => (db.settings.photoDownload ? db.items.find((i) => i.id === id && i.kind === 'photo') : null);
 /** Teilbare Inhalte: Fotos der Stationen immer (Link kennt nur der Gast), Bilder/Videos nur solange sie auf der Wall sind. */
-const findShareable = (id) => db.items.find((i) => i.id === id && (i.kind === 'photo' || i.onWall));
+const findShareable = (id) => db.items.find((i) => i.id === id && (i.kind === 'photo' ? db.settings.photoDownload : i.onWall));
 const itemFilePath = (item) => (item.asset
   ? MEDIA_DIRS.map((d) => path.join(d, item.asset)).find((f) => fs.existsSync(f)) || path.join(MEDIA_DIR, item.asset)
   : path.join(UPLOADS, item.file));
@@ -1117,7 +1120,7 @@ app.get('/api/hunt/me', (req, res) => {
     active: db.hunt.active, now: Date.now(), title: db.settings.title,
     endsAt: db.hunt.active ? db.hunt.endsAt : null,
     ended: !db.hunt.active && !!db.hunt.endsAt && db.hunt.endsAt <= Date.now(),
-    photoCount: db.settings.huntPhotos, minutes: db.settings.huntMinutes,
+    photoCount: db.settings.huntPhotos, minutes: db.settings.huntMinutes, download: db.settings.huntDownload,
     player: p ? playerView(p) : null,
   });
 });

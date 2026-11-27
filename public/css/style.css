@@ -889,3 +889,4 @@ body.wall.obs-on .wall-empty { display: none; }
 .hunt-collage.big { width: min(86vh, 86vw); height: min(78vh, 86vw); gap: 8px; padding: 8px; border-radius: 18px; }
 .hunt-collage.big img { border-radius: 10px; }
 .viewer-media .hunt-collage img { min-width: 0; max-width: none; max-height: none; }
+body.nosave img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-user-drag: none; }

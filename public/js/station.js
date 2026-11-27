@@ -280,7 +280,9 @@
     try {
       const q = new URLSearchParams({ share: $('#share').checked ? '1' : '0', station: stationName, frame: frame ? frame.name : '', w: photoBlob.w || '', h: photoBlob.h || '' });
       const data = await api('/api/photos?' + q, { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: photoBlob });
-      $('#qrImg').src = data.qr;
+      $('#qrImg').hidden = !data.qr; // Download in den Einstellungen abschaltbar
+      if (data.qr) $('#qrImg').src = data.qr;
+      $('#qrHint').hidden = !data.qr;
       $('#qrPhoto').src = data.url;
       $('#qrNote').textContent = data.onWall ? '✨ Dein Foto erscheint jetzt auf der Wall of Content!'
         : data.pending ? '✨ Dein Foto erscheint nach der Freigabe auf der Wall of Content.' : '';

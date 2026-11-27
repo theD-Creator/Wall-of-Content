@@ -644,7 +644,7 @@
     viewerBar.style.width = '0%';
 
     const qr = $('#viewerQr');
-    qr.hidden = !settings.viewerQr || gridMode || !!item.hunt;
+    qr.hidden = !settings.viewerQr || gridMode || !!item.hunt || (item.kind === 'photo' && !settings.photoDownload);
     if (!qr.hidden) $('img', qr).src = `/api/items/${encodeURIComponent(item.id)}/qr.svg`;
 
     if (item.kind === 'video') {
