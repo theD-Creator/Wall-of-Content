@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#000a3e">
+  <title>Wall of Content</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/neu.css">
+  <script src="/js/design.js"></script>
+</head>
+<body class="wall">
+  <div id="bg" class="wall-bg"></div>
+  <header class="wall-head">
+    <h1 id="title"></h1>
+    <p id="subtitle"></p>
+  </header>
+  <div id="stage" class="stage"></div>
+  <div id="layout" class="layout-host"></div>
+  <img class="logo wall-logo" alt="" hidden>
+  <p id="empty" class="wall-empty" hidden>Noch keine Inhalte – lade im Admin-Panel Bilder und Videos hoch<br>oder mach ein Foto an der Fotostation.</p>
+
+  <div id="viewer" class="viewer" hidden>
+    <div class="viewer-frame">
+      <div id="viewerMedia" class="viewer-media"></div>
+      <div id="viewerTitle" class="viewer-title"></div>
+      <div id="viewerSpin" class="viewer-spin" hidden><div class="spinner"></div></div>
+      <div id="viewerMsg" class="viewer-msg" hidden></div>
+      <button id="viewerSound" class="viewer-sound" hidden>🔇 Tippen für Ton</button>
+      <div class="viewer-progress"><i id="viewerBar"></i></div>
+    </div>
+    <aside id="viewerQr" class="viewer-qr" hidden>
+      <img alt="QR-Code zum Mitnehmen">
+      <span>Scannen &amp; mitnehmen</span>
+    </aside>
+    <button id="viewerClose" class="viewer-close" aria-label="Schließen">✕</button>
+  </div>
+  <aside id="board" class="board" hidden>
+    <h2>🏆 Quiz-Rangliste</h2>
+    <ol id="boardList"></ol>
+  </aside>
+  <div id="obsLive" class="obs-live full" hidden>
+    <video id="obsVideo" playsinline muted></video>
+    <span class="obs-badge">● Live</span>
+  </div>
+  <div class="qr-stack">
+    <aside id="nowPlaying" class="now-playing" hidden aria-live="polite">
+      <div class="np-vinyl"><div class="np-disc"><div class="np-label"><img id="npCover" alt="" hidden></div></div></div>
+      <div class="np-text"><small>♪ Läuft gerade</small><b id="npTitle"></b><span id="npArtist"></span></div>
+    </aside>
+    <aside id="portalQr" class="hunt-qr portal-qr" hidden>
+      <img alt="QR-Code zur Besucher-App">
+      <div><b>PROGRAMM</b><span>&amp; Challenges</span></div>
+    </aside>
+    <aside id="huntQr" class="hunt-qr" hidden>
+      <img alt="QR-Code zum Color Hunt">
+      <div><b>COLOR HUNT</b><span>Mitmachen!</span><span id="huntCountdown" class="hunt-countdown" hidden></span></div>
+    </aside>
+  </div>
+  <div id="huntFinal" class="hunt-final" hidden></div>
+
+  <div id="winner" class="winner" hidden>
+    <div id="confetti" class="confetti"></div>
+    <div class="winner-card">
+      <div class="winner-kicker">🏆 Sieger im Color Hunt</div>
+      <h2 id="winnerName"></h2>
+      <div class="winner-color"><i></i><span id="winnerColor"></span></div>
+      <div id="winnerPhotos" class="winner-photos"></div>
+    </div>
+  </div>
+
+  <!-- DVD-Logo-Bildschirmschoner -->
+  <div id="dvd" class="dvd" hidden>
+    <div id="dvdLogo" class="dvd-logo"><span>tecspaze</span></div>
+  </div>
+  <script src="/js/common.js"></script>
+  <script src="/vendor/mpegts.js"></script>
+  <script src="/js/wall-layouts.js"></script>
+  <script src="/js/wall.js"></script>
+</body>
+</html>

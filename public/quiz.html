@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#000a3e">
+  <title>Quiz</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/neu.css">
+  <script src="/js/design.js"></script>
+</head>
+<body class="quiz station">
+  <div id="bg" class="wall-bg"></div>
+  <!-- Solange kein Quiz läuft, zeigt das iPad die Wall of Content -->
+  <iframe id="wallFrame" class="wall-frame" title="Wall of Content" hidden></iframe>
+
+  <section class="screen" data-screen="intro">
+    <div class="quiz-intro">
+      <div class="quiz-hero">
+        <p id="eventTitle" class="kicker"></p>
+        <h1 class="rainbow">Quiz</h1>
+        <p class="muted"><span id="introCount"></span> Fragen – wer schnell und richtig antwortet, bekommt die meisten Punkte!</p>
+        <button id="playBtn" class="btn primary huge">Los geht's!</button>
+      </div>
+      <div class="quiz-board">
+        <h2>🏆 Rangliste</h2>
+        <ol id="introBoard" class="board-list"></ol>
+      </div>
+    </div>
+    <img class="logo station-logo" alt="" hidden>
+  </section>
+
+  <section class="screen" data-screen="name">
+    <form id="nameForm" class="hunt-box">
+      <h1>Wie heißt du?</h1>
+      <input id="name" maxlength="20" autocomplete="off" autocapitalize="words" placeholder="Dein Name" required>
+      <button class="btn primary big">Quiz starten</button>
+      <button type="button" class="btn ghost" data-action="home">Abbrechen</button>
+      <p id="nameError" class="error"></p>
+    </form>
+  </section>
+
+  <section class="screen" data-screen="question">
+    <div class="quiz-top">
+      <span id="qProgress" class="quiz-pill"></span>
+      <span id="qScore" class="quiz-pill"></span>
+    </div>
+    <div class="quiz-timer"><i id="qTimer"></i></div>
+    <h2 id="qText" class="quiz-question"></h2>
+    <div id="qAnswers" class="quiz-answers"></div>
+    <p id="qFeedback" class="quiz-feedback"></p>
+  </section>
+
+  <section class="screen" data-screen="result">
+    <div class="quiz-intro">
+      <div class="quiz-hero">
+        <div class="camera-icon">🎉</div>
+        <h1>Super, <span id="rName"></span>!</h1>
+        <p class="quiz-score"><b id="rScore"></b> Punkte</p>
+        <p class="muted"><span id="rCorrect"></span> richtig · Platz <b id="rRank"></b> von <span id="rPlayers"></span></p>
+        <button class="btn primary big" data-action="home">Fertig</button>
+      </div>
+      <div class="quiz-board">
+        <h2>🏆 Rangliste</h2>
+        <ol id="resultBoard" class="board-list"></ol>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="/js/common.js"></script>
+  <script src="/js/quiz.js"></script>
+</body>
+</html>

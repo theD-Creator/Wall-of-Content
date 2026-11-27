@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0e0e19">
+  <title>Admin – Wall of Content</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/neu.css">
+  <script src="/js/design.js"></script>
+</head>
+<body class="admin">
+  <form id="login" class="login" hidden>
+    <span class="login-sticker" aria-hidden="true">✦</span>
+    <h1>Admin-Panel</h1>
+    <p class="muted">Wall of Content</p>
+    <div id="userPick" class="user-pick" role="listbox" aria-label="Benutzer"></div>
+    <input id="password" type="password" placeholder="Passwort" autocomplete="current-password" required>
+    <button class="btn primary">Anmelden</button>
+    <p id="loginError" class="error"></p>
+    <button type="button" id="forgotPw" class="btn ghost small">Passwort vergessen?</button>
+  </form>
+
+  <div id="app" hidden>
+    <header class="admin-head">
+      <img class="logo admin-logo" src="/assets/logo.svg" alt=""><strong>Wall of Content</strong>
+      <nav id="tabs" class="tabs">
+        <span class="nav-group">Live</span>
+        <button data-tab="show" data-icon="🎬" class="active"><span class="emo">🎬 </span>Show</button>
+        <button data-tab="overview" data-icon="🏠">Übersicht</button>
+        <button data-tab="stage" data-icon="🎭">Bühne</button>
+        <button data-tab="obs" data-icon="📡">Livestream <span id="obsBadge" class="badge live-badge" hidden>LIVE</span></button>
+        <button data-tab="chat" data-icon="💬">Team-Chat <span id="chatBadge" class="badge" hidden></span></button>
+        <button data-tab="moments" data-icon="📍">Moments <span id="momentBadge" class="badge" hidden></span></button>
+        <span class="nav-group">Inhalte</span>
+        <button data-tab="media" data-icon="🖼️">Inhalte</button>
+        <button data-tab="photos" data-icon="📸">Fotos <span id="pendingBadge" class="badge" hidden></span></button>
+        <span class="nav-group">Mitmachen</span>
+        <button data-tab="hunt" data-icon="🎨">Color Hunt <span id="huntBadge" class="badge" hidden></span></button>
+        <button data-tab="quiz" data-icon="❓">Quiz</button>
+        <button data-tab="program" data-icon="📅">Programm</button>
+        <button data-tab="challenges" data-icon="🎯">Challenges</button>
+        <button data-tab="shop" data-icon="🛍️">Shop <span id="shopBadge" class="badge" hidden></span></button>
+        <button data-tab="feedback" data-icon="💬">Feedback <span id="fbBadge" class="badge" hidden></span></button>
+        <span class="nav-group">Gestaltung</span>
+        <button data-tab="frames" data-icon="🪟">Rahmen</button>
+        <button data-tab="backgrounds" data-icon="🌌">Hintergründe</button>
+        <span class="nav-group">System</span>
+        <button data-tab="backup" data-icon="💾"><span class="emo">💾 </span>Sicherung</button>
+        <button data-tab="pack" data-icon="📦"><span class="emo">📦 </span>Paket teilen</button>
+        <button data-tab="users" data-icon="👥">Benutzer</button>
+        <button data-tab="settings" data-icon="⚙️">Einstellungen</button>
+      </nav>
+      <span id="meChip" class="me-chip"></span>
+      <span id="fsSlot"></span>
+      <button id="logout" class="btn ghost small">Abmelden</button>
+    </header>
+
+    <main>
+      <div class="page-head" aria-live="polite">
+        <div><small id="pageKicker">Live</small><h1 id="pageTitle">Show</h1></div>
+        <a class="btn small" href="/" target="_blank" rel="noopener">Wall öffnen ↗</a>
+      </div>
+      <!-- ===================== Show-Modus ===================== -->
+      <section data-panel="show" class="panel active">
+        <div class="card show-card">
+          <h2>🎬 Live-Steuerung der Wall</h2>
+          <div class="show-big">
+            <button class="btn" data-show-cmd="random"><span>🎲</span>Zufälligen Inhalt zeigen</button>
+            <button class="btn" data-show-cmd="close"><span>✕</span>Anzeige schließen</button>
+            <button class="btn" data-show-cmd="dvd"><span>📀</span>DVD-Logo jetzt</button>
+            <button class="btn" data-show-cmd="wake"><span>☀️</span>Wall aufwecken</button>
+            <button class="btn" data-show-cmd="reload" data-target="wall"><span>↻</span>Wall neu laden</button>
+            <button class="btn" data-show-cmd="reload" data-target="station"><span>↻</span>Stationen neu laden</button>
+          </div>
+        </div>
+        <div class="show-grid">
+          <div class="card show-card">
+            <h2>⚡ Aktionen</h2>
+            <div class="show-row"><span>Fotostationen aktiv</span><label class="switch"><input type="checkbox" data-show="stationsEnabled"><span></span></label></div>
+            <div class="show-row"><span>Color Hunt geöffnet</span><label class="switch"><input type="checkbox" data-show-special="hunt"><span></span></label></div>
+            <div class="show-row"><span>Quiz gestartet</span><label class="switch"><input type="checkbox" data-show-special="quiz"><span></span></label></div>
+            <div class="show-row"><span>Quiz-Rangliste auf der Wall</span><label class="switch"><input type="checkbox" data-show-special="board"><span></span></label></div>
+            <div class="show-row"><span>QR-Code Besucher-App auf der Wall</span><label class="switch"><input type="checkbox" data-show="portalQr"><span></span></label></div>
+            <div class="show-row"><span>QR-Code zum Mitnehmen im Viewer</span><label class="switch"><input type="checkbox" data-show="viewerQr"><span></span></label></div>
+            <div class="show-row"><span>Dateiname im Viewer anzeigen</span><label class="switch"><input type="checkbox" data-show="viewerTitle"><span></span></label></div>
+            <div class="show-row"><span>Fotostation-Fotos zum Download</span><label class="switch"><input type="checkbox" data-show="photoDownload"><span></span></label></div>
+            <div class="show-row"><span>Color-Hunt-Fotos speichern erlauben</span><label class="switch"><input type="checkbox" data-show="huntDownload"><span></span></label></div>
+            <div class="show-row"><span>Color-Hunt-Fotos als Bubbles</span><label class="switch"><input type="checkbox" data-show="huntOnWall"><span></span></label></div>
+            <div class="show-row"><span>Fotos erst nach Freigabe</span><label class="switch"><input type="checkbox" data-show="moderation"><span></span></label></div>
+          </div>
+          <div class="card show-card">
+            <h2>🖼️ Wall</h2>
+            <label class="show-row"><span>Design</span><select data-show="design"><option value="neu">✨ Neu</option><option value="klassisch">Klassisch</option></select></label>
+            <label class="show-row"><span>Layout</span><select data-show="wallLayout"><option value="schweben">Schwebende Kacheln</option><option value="buehne">Bühne</option><option value="mosaik">Mosaik</option><option value="wechsel">Bühne ⇄ Mosaik im Wechsel</option></select></label>
+            <label class="show-row"><span>Bühne wechselt alle</span><input type="range" min="4" max="60" step="1" data-show="stageSeconds" data-unit=" s"><output></output></label>
+            <label class="show-row"><span>Titel</span><input data-show="title" maxlength="80"></label>
+            <label class="show-row"><span>Untertitel</span><input data-show="subtitle" maxlength="160"></label>
+            <label class="show-row"><span>Akzentfarbe</span><input type="color" data-show="accent"></label>
+            <label class="show-row"><span>Tempo</span><input type="range" min="0" max="5" step="0.1" data-show="speed" data-unit="×"><output></output></label>
+            <label class="show-row"><span>Kachelgröße</span><input type="range" min="80" max="480" step="10" data-show="thumbSize" data-unit=" px"><output></output></label>
+            <label class="show-row"><span>Kacheln</span><input type="range" min="1" max="120" step="1" data-show="wallMaxItems"><output></output></label>
+            <label class="show-row"><span>Bilder zeigen</span><input type="range" min="2" max="60" step="1" data-show="imageDuration" data-unit=" s"><output></output></label>
+            <label class="show-row"><span>QR-Größe</span><input type="range" min="50" max="200" step="5" data-show="qrSize" data-unit=" %"><output></output></label>
+            <div class="show-row"><span>Videos mit Ton</span><label class="switch"><input type="checkbox" data-show="videoSound"><span></span></label></div>
+            <div class="show-row"><span>Inhalte vorab laden</span><label class="switch"><input type="checkbox" data-show="preloadMedia"><span></span></label></div>
+            <p class="show-hint">Vorladen: Bilder und Videos der Wall werden im Hintergrund geladen und starten beim Antippen sofort.</p>
+          </div>
+          <div class="card show-card">
+            <h2>🎵 Läuft gerade</h2>
+            <div class="show-row"><span>Song auf der Wall zeigen</span><label class="switch"><input type="checkbox" data-show="nowPlaying"><span></span></label></div>
+            <label class="show-row"><span>Quelle</span>
+              <select data-show="nowPlayingSource">
+                <option value="auto">Automatisch (dieser Rechner, sonst DJ-Software)</option>
+                <option value="mac">Nur Musik auf diesem Rechner (Apps &amp; Browser)</option>
+                <option value="datei">Nur DJ-Software (Textdatei)</option>
+                <option value="manuell">Von Hand eintragen</option>
+              </select></label>
+            <label class="field"><span>Von Hand: „Interpret - Titel“ (nur bei Quelle „Von Hand“)</span>
+              <input data-show="nowPlayingManual" maxlength="200" placeholder="z. B. The Band - Live-Set"></label>
+            <label class="field"><span>Textdatei der DJ-Software (leer = VirtualDJ automatisch suchen)</span>
+              <input data-show="nowPlayingFile" placeholder="/Users/…/Documents/VirtualDJ/History/tracklist.txt"></label>
+            <div id="npStatus" class="np-status"></div>
+            <p class="show-hint">„Dieser Rechner“ = der Laptop, auf dem die Wall of Content läuft: Spotify, Apple Music und Musik im Browser
+              (Spotify Web, YouTube Music, SoundCloud …). Linux: funktioniert direkt (Server im Desktop-Terminal starten). Mac: beim ersten Mal
+              fragt macOS, ob das Terminal Spotify/Musik/den Browser steuern darf – „OK“ klicken. DJ-Software: VirtualDJ schreibt die Datei selbst;
+              für Serato, Traktor oder Rekordbox z. B. „What's Now Playing“ eine Textdatei schreiben lassen.</p>
+          </div>
+          <div class="card show-card">
+            <h2>📀 DVD-Logo</h2>
+            <div class="show-row"><span>Bei Inaktivität zeigen</span><label class="switch"><input type="checkbox" data-show="dvdMode"><span></span></label></div>
+            <div class="show-row"><span>Ecken-Modus</span><label class="switch"><input type="checkbox" data-show="dvdCorners"><span></span></label></div>
+            <p class="show-hint">Ecken-Modus: Das Logo trifft garantiert alle 4 Ecken hintereinander (oben links → oben rechts → unten rechts → unten links).</p>
+            <label class="show-row"><span>Nach Inaktivität</span><input type="range" min="0.5" max="30" step="0.5" data-show="dvdIdle" data-unit=" min"><output></output></label>
+            <label class="show-row"><span>Tempo</span><input type="range" min="0.2" max="5" step="0.1" data-show="dvdSpeed" data-unit="×"><output></output></label>
+            <p class="show-hint">Inaktiv heißt: niemand hat die Wall berührt, nichts wird gezeigt und es kam kein neuer Inhalt. Jede Berührung beendet das DVD-Logo.</p>
+          </div>
+          <div class="card show-card">
+            <h2>⛶ Vollbild</h2>
+            <div class="show-row"><span>Vollbild beim ersten Antippen</span><label class="switch"><input type="checkbox" data-show="autoFullscreen"><span></span></label></div>
+            <p class="show-hint">Gilt für Wall, Fotostation, Quiz und Color Hunt. Browser erlauben Vollbild nur nach einer Berührung – danach bleibt es an.
+              Jede Seite (außer der Besucher-App) hat außerdem einen ⛶-Knopf; an der Wall auch Taste F oder Doppelklick.</p>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="overview" class="panel">
+        <div class="cards" id="stats"></div>
+        <div class="grid2">
+          <div class="card">
+            <h2>Adressen</h2>
+            <div id="urls" class="urls"></div>
+          </div>
+          <div class="card">
+            <h2>Verbundene Geräte</h2>
+            <ul id="devices" class="devices"></ul>
+            <h2>Steuerung</h2>
+            <div class="row wrap">
+              <label class="switch"><input id="stationsEnabled" type="checkbox"><span></span> Fotostationen aktiv</label>
+            </div>
+            <div class="row wrap">
+              <button class="btn" data-cmd="reload" data-target="wall">Wall neu laden</button>
+              <button class="btn" data-cmd="reload" data-target="station">Stationen neu laden</button>
+              <button class="btn" data-cmd="close">Anzeige auf der Wall schließen</button>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Verbund-Wall <span class="tag-exp">experimentell</span></h2>
+            <p class="muted small">Mehrere iPads oder Bildschirme nebeneinander bilden eine große Wall – die Kacheln wandern von einem Bildschirm zum nächsten.
+              Öffne auf jedem Gerät den passenden Link (Position 1 = oben links). Anzahl und Format stellst du unter „Einstellungen“ ein.</p>
+            <div id="gridLinks" class="grid-links"></div>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="media" class="panel">
+        <div id="drop" class="drop">
+          <p><b>Bilder &amp; Videos hierher ziehen</b> oder</p>
+          <label class="btn primary">Dateien auswählen<input id="mediaInput" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple hidden></label>
+          <p class="muted small">JPG, PNG, WebP, GIF, MP4, WebM, MOV</p>
+          <div id="uploads" class="uploads"></div>
+        </div>
+        <div id="mediaGrid" class="item-grid"></div>
+      </section>
+
+      <section data-panel="photos" class="panel">
+        <div class="row wrap filter">
+          <button class="chip active" data-filter="all">Alle</button>
+          <button class="chip" data-filter="pending">Warten auf Freigabe</button>
+          <button class="chip" data-filter="wall">Auf der Wall</button>
+          <button class="chip" data-filter="private">Nicht geteilt</button>
+        </div>
+        <div id="photoGrid" class="item-grid"></div>
+      </section>
+
+      <section data-panel="hunt" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>Color Hunt</h2>
+            <label class="switch"><input id="huntActive" type="checkbox"><span></span> Geöffnet – QR-Code wird auf der Wall angezeigt</label>
+            <div class="countdown">
+              <div class="countdown-head"><b>⏳ Countdown für die Challenge</b><span id="huntClock" class="hunt-clock">Kein Countdown</span></div>
+              <div class="row wrap">
+                <label class="mins"><input id="huntMins" type="number" min="1" max="600" value="30"> Minuten</label>
+                <button id="huntCdStart" class="btn primary small">Countdown starten</button>
+                <button class="btn small" data-extend="5">+5 Min</button>
+                <button class="btn small" data-extend="-5">−5 Min</button>
+                <button id="huntCdStop" class="btn small ghost">Countdown stoppen</button>
+              </div>
+              <p class="muted small">„Countdown starten“ öffnet den Color Hunt sofort. Die Restzeit läuft auf der Wall und auf den Handys der Gäste mit.
+                Ist sie abgelaufen, schließt der Color Hunt automatisch und alle laufenden Teilnehmer geben ab.</p>
+            </div>
+            <p class="muted small">Wer mitmacht, gibt seinen Namen ein, bekommt eine Farbe und hat dann die eingestellte Zeit für die Fotos.
+              Schließen stoppt nur neue Anmeldungen – wer schon spielt, kann fertig machen. Dauer und Fotoanzahl stellst du unter „Einstellungen“ ein.</p>
+            <div class="row wrap">
+              <button id="huntReset" class="btn danger">Neue Runde (alle Teilnehmer löschen)</button>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Sieger</h2>
+            <div id="huntWinner" class="hunt-winner-bar"></div>
+            <div id="huntUrl" class="urls"></div>
+          </div>
+        </div>
+        <div id="players" class="players"></div>
+      </section>
+
+      <section data-panel="quiz" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>Quiz</h2>
+            <label class="switch"><input id="quizActive" type="checkbox"><span></span> Quiz gestartet – das iPad zeigt das Quiz</label>
+            <label class="switch"><input id="quizBoard" type="checkbox"><span></span> Rangliste auf der Wall zeigen</label>
+            <p class="muted small">Solange das Quiz nicht gestartet ist, zeigt das Quiz-iPad die Wall of Content. Fragenanzahl und Zeit pro Frage stellst du unter „Einstellungen“ ein.</p>
+            <div id="quizUrl" class="urls"></div>
+          </div>
+          <div class="card">
+            <div class="row"><h2 style="flex:1">Rangliste</h2><button id="quizReset" class="btn small danger">Rangliste leeren</button></div>
+            <ol id="quizScores" class="score-list"></ol>
+          </div>
+        </div>
+        <form id="questionForm" class="card">
+          <h2 id="questionFormTitle">Neue Frage</h2>
+          <input name="text" maxlength="200" placeholder="Frage" required>
+          <div class="answer-grid">
+            <label><input type="radio" name="correct" value="0" checked><input name="a0" maxlength="80" placeholder="Antwort 1" required></label>
+            <label><input type="radio" name="correct" value="1"><input name="a1" maxlength="80" placeholder="Antwort 2" required></label>
+            <label><input type="radio" name="correct" value="2"><input name="a2" maxlength="80" placeholder="Antwort 3 (optional)"></label>
+            <label><input type="radio" name="correct" value="3"><input name="a3" maxlength="80" placeholder="Antwort 4 (optional)"></label>
+          </div>
+          <p class="muted small">Markiere mit dem Punkt die richtige Antwort.</p>
+          <div class="row"><button class="btn primary">Speichern</button><button type="button" id="questionCancel" class="btn ghost" hidden>Abbrechen</button></div>
+        </form>
+        <div id="questions" class="questions"></div>
+      </section>
+
+      <!-- ===================== Paket teilen ===================== -->
+      <section data-panel="pack" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>📦 Paket teilen</h2>
+            <p>Erstellt eine ZIP-Datei mit der <b>kompletten Wall of Content</b>: App, alle Inhalte, Rahmen, Hintergründe, Logo,
+              Einstellungen, Benutzer mit Passwörtern, Color Hunt, Quiz, Besucher-App (Programm, Challenges, Shop, Feedback).</p>
+            <p class="muted small">Weitergeben per AirDrop, USB-Stick oder Cloud. Der Empfänger entpackt die ZIP, öffnet den Ordner
+              „Wall-of-Content“ und doppelklickt <code>Start-Mac.command</code> – alles ist sofort drin, Anmeldung mit denselben Passwörtern.</p>
+            <div id="packInfo" class="pack-info"></div>
+            <div class="show-row"><span>Fotos der Gäste mitnehmen</span><label class="switch"><input id="packPhotos" type="checkbox" checked><span></span></label></div>
+            <p class="show-hint">Fotostation und Color Hunt. Ohne Haken bleiben nur deine eigenen Inhalte drin.</p>
+            <div class="show-row"><span>Node.js mitliefern (offline startklar)</span><label class="switch"><input id="packNode" type="checkbox" checked><span></span></label></div>
+            <p class="show-hint">Dann braucht der Empfänger kein Internet. Passt das mitgelieferte Node nicht zu seinem Mac, wird automatisch das richtige geladen.</p>
+            <div id="packWarn"></div>
+            <a id="packBtn" class="btn primary big" href="/api/admin/package.zip">📦 Paket erstellen &amp; herunterladen</a>
+          </div>
+          <div class="card">
+            <h2>🛡️ Was ist mit den Passwörtern?</h2>
+            <ul class="pack-list">
+              <li><b>Admin-Passwörter</b> liegen nur als <b>scrypt-Hash</b> im Paket – sie funktionieren beim Empfänger genauso,
+                lassen sich aus den Dateien aber nicht zurückrechnen.</li>
+              <li><b>Nicht im Paket:</b> das Startpasswort im Klartext (<code>admin-password.txt</code>), der private HTTPS-Schlüssel
+                und das Zertifikat (werden auf dem neuen Rechner neu erzeugt), angemeldete Sitzungen.</li>
+              <li>Die <b>öffentliche Adresse für QR-Codes</b> wird geleert – sie gehört zum alten Netzwerk.</li>
+              <li>Gib das Paket nur an Leute, die die Wall betreiben sollen: Es enthält Fotos und Daten der Gäste.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="stage" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>🎭 Was läuft auf der Bühne?</h2>
+            <label class="radio-card"><input type="radio" name="stageMode" value="alle" data-setting="stageMode">
+              <span><b>Alle Inhalte</b><small class="muted">Zufällig durch alles, was auf der Wall ist. Angepinnte kommen doppelt so oft.</small></span></label>
+            <label class="radio-card"><input type="radio" name="stageMode" value="playlist" data-setting="stageMode">
+              <span><b>Nur die Playlist</b><small class="muted">Nur angepinnte Inhalte, genau in der Reihenfolge unten. Ohne Playlist läuft alles.</small></span></label>
+            <div class="show-row"><span>Knopf „Alle Inhalte“ auf der Wall</span><label class="switch"><input type="checkbox" data-setting="browseButton"><span></span></label></div>
+            <p class="show-hint">Besucher können damit selbst durch alle Inhalte stöbern, nach Fotos, Videos, Moments und Hashtags filtern und antippen.</p>
+            <label class="show-row"><span>Wechsel alle</span><input type="range" min="4" max="60" step="1" data-setting="stageSeconds" data-unit=" s"><output></output></label>
+          </div>
+          <div class="card">
+            <h2>📌 Playlist <small class="muted" id="playlistCount"></small></h2>
+            <p class="muted small">Reihenfolge per Ziehen oder mit ↑ ↓ ändern. „▶ Jetzt“ zeigt den Inhalt sofort auf der Bühne.</p>
+            <ol id="playlist" class="playlist"></ol>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row wrap" style="justify-content:space-between">
+            <h2>Alle Inhalte</h2>
+            <div id="stageFilter" class="chips"></div>
+          </div>
+          <div id="stageItems" class="stage-grid"></div>
+        </div>
+      </section>
+
+      <section data-panel="chat" class="panel">
+        <div class="card chat-card">
+          <h2>💬 Team-Chat</h2>
+          <p class="muted small">Nur für Mitarbeiter-Konten sichtbar. Die Redaktion schreibt auf dem Handy unter <code>/chat</code> mit.</p>
+          <div id="teamChat" class="team-chat"></div>
+        </div>
+      </section>
+
+      <section data-panel="obs" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>📡 Livestream aus OBS</h2>
+            <div id="obsStatus" class="obs-status"></div>
+            <div class="obs-preview"><video id="obsPreview" playsinline muted></video><span id="obsPreviewNote" class="muted small">Vorschau erscheint, sobald OBS streamt.</span></div>
+            <div class="show-row"><span>Livestream auf der Wall zeigen</span><label class="switch"><input type="checkbox" data-setting="obsShow"><span></span></label></div>
+            <label class="show-row"><span>Anzeige</span>
+              <select data-setting="obsDisplay">
+                <option value="vollbild">Groß über der ganzen Wall</option>
+                <option value="buehne">Auf der Bühne (Mosaik: erste Kachel)</option>
+                <option value="pip">Bild-im-Bild oben rechts</option>
+              </select></label>
+            <div class="show-row"><span>Mit Ton</span><label class="switch"><input type="checkbox" data-setting="obsSound"><span></span></label></div>
+            <p class="show-hint">Ton gibt es nur, wenn an der Wall schon einmal getippt oder geklickt wurde – das verlangen die Browser.</p>
+          </div>
+          <div class="card">
+            <h2>So richtest du OBS ein</h2>
+            <ol class="obs-steps">
+              <li>In OBS: <b>Einstellungen → Stream</b>, Dienst <b>„Benutzerdefiniert…“</b>.</li>
+              <li><b>Server</b> eintragen:<div class="copy-row"><code id="obsServer">…</code><button class="btn small" type="button" data-copy="obsServer">Kopieren</button></div></li>
+              <li><b>Stream-Key</b> eintragen:<div class="copy-row"><code id="obsKey" class="secret">••••••••</code>
+                <button class="btn small" type="button" id="obsKeyShow">Zeigen</button><button class="btn small" type="button" data-copy="obsKey">Kopieren</button></div></li>
+              <li><b>„Stream starten“</b> klicken – nach ein, zwei Sekunden erscheint das Bild auf der Wall.</li>
+            </ol>
+            <p class="show-hint">Empfohlen in OBS unter <b>Ausgabe</b>: Encoder x264 oder Hardware (H.264), Keyframe-Intervall 2 s, 2500–6000 kbit/s.
+              Läuft OBS auf demselben Laptop, geht auch <code>rtmp://localhost:1935/live</code>. Auf einem anderen Rechner im selben WLAN
+              die Adresse oben verwenden (beim ersten Start fragt macOS evtl., ob eingehende Verbindungen erlaubt sind – „Erlauben“).</p>
+            <button id="obsKeyNew" class="btn small danger" type="button">Neuen Stream-Key erzeugen</button>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="moments" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>📍 Live-Modus</h2>
+            <p>Die Redaktion fotografiert oder filmt mit dem Handy unter <b id="liveUrl">/live</b> und schickt <b>Moments</b> mit
+              Bildunterschrift und Hashtags direkt auf die Wall. Konten mit der Rolle „Redaktion“ legst du unter
+              <a href="#" data-goto="users">Benutzer</a> an.</p>
+            <img id="liveQr" class="share-qr" alt="QR-Code zur Live-Kamera" width="160" height="160">
+          </div>
+          <div class="card">
+            <h2>So erscheinen Moments</h2>
+            <div class="show-row"><span>Sofort groß auf die Bühne</span><label class="switch"><input type="checkbox" data-setting="momentInstant"><span></span></label></div>
+            <div class="show-row"><span>Erst nach Freigabe zeigen</span><label class="switch"><input type="checkbox" data-setting="momentApproval"><span></span></label></div>
+            <div class="show-row"><span>Live-Ticker im Band</span><label class="switch"><input type="checkbox" data-setting="momentTicker"><span></span></label></div>
+            <label class="show-row"><span>„LIVE“ für</span><input type="range" min="1" max="120" step="1" data-setting="momentHighlightMin" data-unit=" min"><output></output></label>
+            <label class="field"><span>Hashtag-Vorschläge für die Redaktion</span>
+              <input data-setting="momentTags" maxlength="400" placeholder="#UrbanArtNight #Backstage"></label>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Alle Moments</h2>
+          <div id="momentList" class="moment-list"></div>
+        </div>
+      </section>
+
+      <section data-panel="backup" class="panel">
+        <div id="backupNotice"></div>
+        <div class="grid2">
+          <div class="card">
+            <h2>💾 Wo liegen die Daten?</h2>
+            <p>Uploads, Fotos, Benutzer mit Passwörtern, Einstellungen und eigene Rahmen/Hintergründe liegen <b>außerhalb</b> des
+              Programmordners. Eine neu heruntergeladene Version findet sie deshalb automatisch wieder – du musst nichts kopieren.</p>
+            <div id="backupInfo" class="pack-info"></div>
+            <a id="backupBtn" class="btn primary big" href="/api/admin/backup.zip">💾 Sicherung herunterladen</a>
+            <p class="show-hint">Eine ZIP-Datei mit allen Daten – z. B. für einen anderen Laptop oder als Notfall-Kopie.</p>
+          </div>
+          <div class="card">
+            <h2>📥 Sicherung einspielen</h2>
+            <p>ZIP-Datei aus „Sicherung herunterladen“ oder „Paket teilen“ wählen. Der aktuelle Stand wird vorher automatisch
+              beiseitegelegt (im Datenordner unter <code>.vorher-…</code>).</p>
+            <label class="btn big">ZIP-Datei wählen<input id="restoreInput" type="file" accept=".zip,application/zip" hidden></label>
+            <div id="restoreProgress" class="upload-progress" hidden><i></i></div>
+            <h2>📂 Aus altem Ordner übernehmen</h2>
+            <p>Hast du eine ältere Version heruntergeladen, in der noch deine Daten sind? Dann hier den Ordner angeben
+              (den Programmordner oder seinen <code>data</code>-Ordner).</p>
+            <div id="oldInstalls" class="old-installs"></div>
+            <form id="importForm" class="row wrap">
+              <input name="path" placeholder="/Users/…/Downloads/Wall-of-Content" required style="flex:1;min-width:14rem">
+              <button class="btn primary">Übernehmen</button>
+            </form>
+            <button id="findOld" class="btn small" type="button">🔍 Auf diesem Rechner suchen</button>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="users" class="panel">
+        <div id="users" class="players"></div>
+        <form id="userForm" class="card" style="max-width:28rem" hidden>
+          <h2>Benutzer hinzufügen</h2>
+          <input name="name" maxlength="40" placeholder="Name, z. B. Anna M." required>
+          <select name="role">
+            <option value="admin">Admin – voller Zugriff aufs Admin-Panel</option>
+            <option value="redaktion">Redaktion – nur Live-Kamera (Moments)</option>
+          </select>
+          <p class="muted small">Die Redaktion meldet sich auf dem Handy unter <code>/live</code> an und schickt Moments auf die Wall.</p>
+          <button class="btn primary">Hinzufügen</button>
+        </form>
+      </section>
+
+      <!-- ===================== Programm ===================== -->
+      <section data-panel="program" class="panel">
+        <div class="grid2">
+          <form id="progForm" class="card">
+            <h2 id="progFormTitle">Neuer Programmpunkt</h2>
+            <input name="title" maxlength="80" placeholder="Titel, z. B. Live-Graffiti mit …" required>
+            <textarea name="description" maxlength="300" rows="2" placeholder="Kurze Beschreibung (optional)"></textarea>
+            <div class="time-row">
+              <label>Datum<input name="date" type="date" required></label>
+              <label>Beginn<input name="start" type="time" required></label>
+              <label>Ende<input name="end" type="time" required></label>
+            </div>
+            <label class="switch"><input name="highlight" type="checkbox"><span></span> ★ Als Highlight hervorheben</label>
+            <div class="row"><button class="btn primary">Speichern</button><button type="button" id="progCancel" class="btn ghost" hidden>Abbrechen</button></div>
+            <p class="muted small">Endet ein Programmpunkt nach Mitternacht, einfach die Endzeit eintragen – er geht dann bis zum nächsten Tag.</p>
+          </form>
+          <div class="card">
+            <h2>Besucher-App</h2>
+            <p class="muted small">Gäste öffnen die Besucher-App mit dem eigenen Handy. Dort sehen sie das Programm, sammeln Punkte bei den Challenges, holen sich Merch-Coupons und geben Feedback.</p>
+            <div id="portalUrl" class="urls"></div>
+            <label class="switch"><input id="portalQr" type="checkbox"><span></span> QR-Code zur Besucher-App auf der Wall zeigen</label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row wrap"><h2 style="flex:1">Ablauf</h2><button id="progSort" class="btn small">Nach Uhrzeit sortieren</button></div>
+          <p class="muted small">Mit ▲ ▼ legst du die Reihenfolge in der Besucher-App fest. Änderungen erscheinen sofort auf allen Handys.</p>
+          <ol id="progList" class="admin-prog"></ol>
+        </div>
+      </section>
+
+      <!-- ===================== Challenges ===================== -->
+      <section data-panel="challenges" class="panel">
+        <div class="cards" id="chStats"></div>
+        <div class="grid2">
+          <div class="card">
+            <h2>🔍 QR-Code-Challenge</h2>
+            <p class="muted small">Druck den QR-Code aus und versteck ihn auf dem Gelände. Wer ihn findet und scannt, bekommt die Punkte – jede Person nur einmal.
+              Jeder Code ist einzigartig und nicht erratbar; „Neuer Code“ macht einen alten Ausdruck ungültig.</p>
+            <div id="qrChallenges" class="code-list"></div>
+            <form id="qrForm" class="sub-form">
+              <b id="qrFormTitle">Neue QR-Code-Challenge</b>
+              <input name="title" maxlength="100" placeholder="Aufgabe" value="Finde den versteckten QR-Code auf dem Gelände!" required>
+              <input name="hint" maxlength="200" placeholder="Tipp für die Suche (optional), z. B. „In der Nähe der Bühne“">
+              <div class="row"><label class="mins">Punkte <input name="points" type="number" min="0" max="10000" value="50" required></label>
+                <button class="btn primary small">Speichern</button><button type="button" id="qrCancel" class="btn ghost small" hidden>Abbrechen</button></div>
+            </form>
+          </div>
+          <div class="card">
+            <h2>🗺️ Digitaler Rundgang – Stationen</h2>
+            <p class="muted small">Jede Station bekommt einen eigenen QR-Code. Den zeigt der Coach an der Station (ausgedruckt oder auf dem Handy).
+              Wer scannt, bekommt den Stempel und Punkte.</p>
+            <div class="row wrap">
+              <label class="mins">Punkte pro Station <input id="stationPoints" type="number" min="0" max="10000"></label>
+              <label class="mins">Bonus für alle Stationen <input id="tourBonus" type="number" min="0" max="100000"></label>
+              <button id="pointsSave" class="btn small">Punkte speichern</button>
+            </div>
+            <div id="stationList" class="code-list"></div>
+            <form id="stationForm" class="sub-form">
+              <b id="stationFormTitle">Neue Station</b>
+              <input name="name" maxlength="60" placeholder="Name, z. B. Graffiti-AG" required>
+              <input name="description" maxlength="240" placeholder="Kurze Beschreibung">
+              <div class="row"><button class="btn primary small">Speichern</button><button type="button" id="stationCancel" class="btn ghost small" hidden>Abbrechen</button>
+                <a class="btn small" href="/admin/print/stations" target="_blank" rel="noopener">🖨️ Alle Stations-Codes drucken</a></div>
+            </form>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="card"><h2>Besuche pro Station</h2><div id="chartStations" class="hbars"></div></div>
+          <div class="card"><h2>Fortschritt der Besucher</h2><p class="muted small">Wie viele Besucher wie viele Stationen geschafft haben.</p><div id="chartProgress" class="hbars"></div></div>
+        </div>
+        <div class="card danger-zone">
+          <h2>Zurücksetzen</h2>
+          <p class="muted small">Nach dem Testen vor der Veranstaltung: löscht alle Besucherprofile, Punkte, Stempel und Coupons. Stationen, Challenges und Shop-Artikel bleiben.</p>
+          <div><button id="progressReset" class="btn danger">Fortschritt aller Besucher löschen</button></div>
+        </div>
+      </section>
+
+      <!-- ===================== Shop ===================== -->
+      <section data-panel="shop" class="panel">
+        <div class="grid2">
+          <div class="card">
+            <h2>🎟️ Coupon prüfen &amp; einlösen</h2>
+            <form id="couponForm" class="row wrap">
+              <input id="couponCode" maxlength="13" placeholder="Code, z. B. ABCDE-FGHIJ" autocomplete="off" autocapitalize="characters" style="flex:1;min-width:12rem">
+              <button class="btn primary">Prüfen</button>
+              <button type="button" id="couponScan" class="btn">📷 Scannen</button>
+            </form>
+            <div id="couponResult"></div>
+            <p class="muted small">Tipp: Scannt ihr den Coupon-QR-Code mit der Kamera-App eines Handys, auf dem ihr im Admin-Panel angemeldet seid, öffnet sich direkt die Einlöse-Seite.</p>
+          </div>
+          <form id="itemForm" class="card">
+            <h2 id="itemFormTitle">Neuer Artikel</h2>
+            <input name="name" maxlength="60" placeholder="Name, z. B. Tecspaze-Sticker" required>
+            <input name="description" maxlength="200" placeholder="Kurze Beschreibung (optional)">
+            <div class="row wrap">
+              <label class="mins">Preis (Punkte) <input name="price" type="number" min="1" max="100000" required></label>
+              <label class="mins">Bestand <input name="stock" type="number" min="0" max="100000" placeholder="∞"></label>
+            </div>
+            <label class="switch"><input name="active" type="checkbox" checked><span></span> Im Shop sichtbar</label>
+            <label class="btn small" style="align-self:flex-start">🖼️ Bild auswählen (optional)<input name="image" type="file" accept="image/jpeg,image/png,image/webp" hidden></label>
+            <div class="row"><button class="btn primary">Speichern</button><button type="button" id="itemCancel" class="btn ghost" hidden>Abbrechen</button></div>
+            <p class="muted small">Bestand leer lassen = unbegrenzt.</p>
+          </form>
+        </div>
+        <div id="shopItemsAdmin" class="item-grid"></div>
+        <div class="card">
+          <div class="row wrap"><h2 style="flex:1">Ausgegebene Coupons</h2>
+            <div class="row wrap filter" id="couponFilter">
+              <button class="chip active" data-filter="all">Alle</button>
+              <button class="chip" data-filter="open">Offen</button>
+              <button class="chip" data-filter="used">Eingelöst</button>
+            </div></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Code</th><th>Artikel</th><th>Punkte</th><th>Geholt</th><th>Status</th><th></th></tr></thead>
+            <tbody id="couponRows"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- ===================== Feedback ===================== -->
+      <section data-panel="feedback" class="panel">
+        <div class="grid2">
+          <div class="card fb-summary">
+            <h2>Durchschnittliche Bewertung</h2>
+            <div class="fb-hero"><span id="fbAvgIcon" class="fb-hero-icon"></span><div><b id="fbAvg">–</b><span id="fbCount" class="muted"></span></div></div>
+          </div>
+          <div class="card">
+            <h2>Verteilung der Bewertungen</h2>
+            <div id="chartRatings" class="hbars ratings"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row wrap fb-tools">
+            <label class="mins">Sortierung
+              <select id="fbSort"><option value="new">Neueste zuerst</option><option value="old">Älteste zuerst</option><option value="best">Beste zuerst</option><option value="worst">Schlechteste zuerst</option></select>
+            </label>
+            <div class="row wrap filter" id="fbFilter">
+              <button class="chip active" data-rating="0">Alle</button>
+              <button class="chip" data-rating="5">😍</button><button class="chip" data-rating="4">🙂</button><button class="chip" data-rating="3">😐</button>
+              <button class="chip" data-rating="2">🙁</button><button class="chip" data-rating="1">😖</button>
+            </div>
+            <label class="switch"><input id="fbTextOnly" type="checkbox"><span></span> Nur mit Text</label>
+            <label class="switch"><input id="fbUnread" type="checkbox"><span></span> Nur ungelesene</label>
+            <span style="flex:1"></span>
+            <a class="btn small" href="/api/admin/feedback.csv">⬇️ Als CSV (Excel)</a>
+            <button id="fbReset" class="btn small danger">Alle löschen</button>
+          </div>
+          <div id="fbList" class="fb-list"></div>
+        </div>
+      </section>
+
+      <section data-panel="frames" class="panel">
+        <div class="card">
+          <p>Rahmen für die Fotostation, am besten im Hochformat 1080 × 1920 px. <b>Deckende Bilder</b> (JPG/PNG) sind Hintergründe – das Foto wird in das Fotofenster in der Mitte gesetzt. <b>Bilder mit Transparenz</b> (PNG/WebP/SVG) werden über das Foto gelegt. Hochladen oder direkt in den Ordner <code>assets/frames</code> legen.</p>
+          <label class="btn primary">Rahmen hochladen<input type="file" data-asset="frames" accept="image/png,image/webp,image/svg+xml,image/jpeg" multiple hidden></label>
+        </div>
+        <div id="framesGrid" class="item-grid"></div>
+      </section>
+
+      <section data-panel="backgrounds" class="panel">
+        <div class="card">
+          <p>Hintergrund für die Wall und den Startbildschirm der Fotostation (Querformat empfohlen) – ein Bild oder ein <b>animiertes Video</b> (MP4 oder WebM, läuft stumm in Schleife). Ohne Auswahl wird der Standard-Farbverlauf gezeigt. Hochladen oder direkt in den Ordner <code>assets/backgrounds</code> legen.</p>
+          <label class="btn primary">Hintergrund hochladen<input type="file" data-asset="backgrounds" accept="image/png,image/webp,image/svg+xml,image/jpeg,video/mp4,video/webm" multiple hidden></label>
+        </div>
+        <div id="backgroundsGrid" class="item-grid wide"></div>
+      </section>
+
+      <section data-panel="settings" class="panel">
+        <form id="settingsForm" class="settings">
+          <fieldset><legend>Design</legend>
+            <label>Design<select name="design"><option value="neu">✨ Neu – Bühne/Mosaik, neues Admin-Panel</option><option value="klassisch">Klassisch – schwebende Kacheln, bisheriges Aussehen</option></select></label>
+            <label>Wall-Layout (Design „Neu“)<select name="wallLayout"><option value="schweben">Schwebende Kacheln – das bewährte Prinzip im neuen Look</option><option value="buehne">Bühne – großes Highlight, neueste Inhalte, Programm</option><option value="mosaik">Mosaik – bildschirmfüllendes Raster</option><option value="wechsel">Bühne ⇄ Mosaik im Wechsel</option></select></label>
+            <label>Bühne wechselt alle (Sekunden)<input name="stageSeconds" type="number" min="4" max="60"></label>
+            <label>Wechsel Bühne/Mosaik alle (Minuten)<input name="layoutMinutes" type="number" min="1" max="60"></label>
+            <p class="muted small">Das Design gilt sofort für die Wall und das Admin-Panel. Einzelne Geräte lassen sich per Adresse umschalten, z. B. <code>/?design=klassisch</code> oder <code>/admin?design=neu</code>.</p>
+          </fieldset>
+          <fieldset><legend>Wall</legend>
+            <label>Titel<input name="title" maxlength="80"></label>
+            <label>Untertitel<input name="subtitle" maxlength="160"></label>
+            <label>Akzentfarbe<input name="accent" type="color"></label>
+            <label>Max. Kacheln gleichzeitig<input name="wallMaxItems" type="number" min="1" max="120"></label>
+            <label>Kachelgröße (px)<input name="thumbSize" type="number" min="80" max="480"></label>
+            <label>Geschwindigkeit<input name="speed" type="range" min="0" max="5" step="0.1"><output></output></label>
+            <label>Anzeigedauer Bilder (s)<input name="imageDuration" type="number" min="2" max="120"></label>
+            <label class="switch"><input name="videoSound" type="checkbox"><span></span> Videos mit Ton abspielen</label>
+            <label class="switch"><input name="viewerTitle" type="checkbox"><span></span> Foto-/Dateinamen beim Antippen anzeigen</label>
+            <label class="switch"><input name="huntOnWall" type="checkbox"><span></span> Color-Hunt-Fotos als Bubbles auf der Wall (mit Name)</label>
+          </fieldset>
+          <fieldset><legend>Fotostation</legend>
+            <label>Titel<input name="stationTitle" maxlength="80"></label>
+            <label>Countdown (s)<input name="countdown" type="number" min="0" max="10"></label>
+            <label>QR-Code anzeigen für (s)<input name="qrTimeout" type="number" min="10" max="600"></label>
+            <label class="switch"><input name="photoDownload" type="checkbox"><span></span> Fotos der Fotostation zum Download (QR-Code) anbieten</label>
+            <label class="switch"><input name="huntDownload" type="checkbox"><span></span> Color-Hunt-Fotos auf dem Handy speichern erlauben</label>
+            <label class="switch"><input name="shareDefault" type="checkbox"><span></span> Haken „Auf der Wall anzeigen“ vorausgewählt</label>
+            <label class="switch"><input name="moderation" type="checkbox"><span></span> Fotos erst nach Freigabe im Admin-Panel auf der Wall zeigen</label>
+            <label>Fotos automatisch löschen nach Stunden (0 = nie)<input name="retentionHours" type="number" min="0" max="8760"></label>
+            <label>Öffentliche Adresse für QR-Codes (leer = automatisch)<input name="publicUrl" type="url" placeholder="http://192.168.1.10:3000"></label>
+          </fieldset>
+          <fieldset><legend>Fotofenster (bei Hintergrund-Rahmen)</legend>
+            <p class="muted small">Position des Fotos auf dem Hintergrund in Prozent, passend zur Vorlage <code>docs/foto-layout.png</code>.</p>
+            <label>Abstand links (%)<input name="photoX" type="number" min="0" max="90" step="0.05"></label>
+            <label>Abstand oben (%)<input name="photoY" type="number" min="0" max="90" step="0.05"></label>
+            <label>Breite (%)<input name="photoW" type="number" min="10" max="100" step="0.05"></label>
+            <label>Höhe (%)<input name="photoH" type="number" min="10" max="100" step="0.05"></label>
+            <label>Eckenradius (% der Breite)<input name="photoRadius" type="number" min="0" max="50" step="0.1"></label>
+          </fieldset>
+          <fieldset><legend>Quiz</legend>
+            <label>Fragen pro Runde<input name="quizCount" type="number" min="3" max="20"></label>
+            <label>Zeit pro Frage (s)<input name="quizSeconds" type="number" min="5" max="60"></label>
+          </fieldset>
+          <fieldset><legend>Verbund-Wall (experimentell)</legend>
+            <label>Bildschirme nebeneinander<input name="gridCols" type="number" min="1" max="8"></label>
+            <label>Bildschirme übereinander<input name="gridRows" type="number" min="1" max="4"></label>
+            <label>Format der Bildschirme
+              <select name="gridAspect">
+                <option value="4:3">4:3 (iPad quer)</option>
+                <option value="3:4">3:4 (iPad hochkant)</option>
+                <option value="16:10">16:10</option>
+                <option value="16:9">16:9 (Fernseher/Monitor)</option>
+                <option value="9:16">9:16 (hochkant)</option>
+              </select>
+            </label>
+          </fieldset>
+          <fieldset><legend>Color Hunt</legend>
+            <label>Zeit pro Person (Minuten)<input name="huntMinutes" type="number" min="1" max="30"></label>
+            <label>Anzahl Fotos<input name="huntPhotos" type="number" min="1" max="10"></label>
+          </fieldset>
+          <div class="row"><button class="btn primary">Speichern</button><span id="settingsSaved" class="muted"></span></div>
+        </form>
+        <form id="passwordForm" class="card" style="max-width:28rem">
+          <h2>Mein Passwort ändern</h2>
+          <input id="pwCurrent" type="password" placeholder="Aktuelles Passwort" autocomplete="current-password" required>
+          <input id="pwNext" type="password" placeholder="Neues Passwort (mind. 6 Zeichen)" autocomplete="new-password" minlength="6" required>
+          <input id="pwRepeat" type="password" placeholder="Neues Passwort wiederholen" autocomplete="new-password" minlength="6" required>
+          <button class="btn primary">Passwort ändern</button>
+          <p class="muted small">Andere angemeldete Geräte werden dabei abgemeldet.</p>
+        </form>
+      </section>
+    </main>
+  </div>
+  <dialog id="shareDlg" class="dlg">
+    <div class="dlg-body">
+      <h2 id="sdTitle">Teilen</h2>
+      <div id="sdQr" class="dlg-qr"></div>
+      <div class="row"><input id="sdUrl" readonly class="mono"><button type="button" id="sdCopy" class="btn small primary">Kopieren</button></div>
+      <p id="sdInfo" class="muted small"></p>
+      <div class="row wrap">
+        <button type="button" id="sdNative" class="btn small" hidden>📤 Teilen …</button>
+        <a id="sdOpen" class="btn small" target="_blank" rel="noopener">Öffnen ↗</a>
+        <span style="flex:1"></span>
+        <button type="button" id="sdClose" class="btn small ghost">Schließen</button>
+      </div>
+    </div>
+  </dialog>
+  <div id="toast" class="toast" hidden></div>
+  <script src="/js/common.js"></script>
+  <script src="/js/qrscan.js"></script>
+  <script src="/js/qrcode.js"></script>
+  <script src="/js/admin.js"></script>
+  <script src="/js/admin-portal.js"></script>
+  <script src="/js/admin-neu.js"></script>
+  <script src="/js/admin-share.js"></script>
+  <script src="/js/admin-show.js"></script>
+  <script src="/js/admin-pack.js"></script>
+  <script src="/js/admin-backup.js"></script>
+  <script src="/js/admin-live.js"></script>
+  <script src="/vendor/mpegts.js"></script>
+  <script src="/js/admin-obs.js"></script>
+  <script src="/js/chat.js"></script>
+  <script src="/js/admin-chat.js"></script>
+</body>
+</html>

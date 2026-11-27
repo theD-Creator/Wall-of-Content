@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b0b0f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="robots" content="noindex">
+  <title>Live – Redaktion</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/neu.css">
+  <script src="/js/design.js"></script>
+</head>
+<body class="portal live">
+  <div id="bg" class="wall-bg"></div>
+
+  <!-- Anmeldung -->
+  <main id="liveLogin" class="p-main live-login" hidden>
+    <div class="live-hero">
+      <span class="live-dot">● Live</span>
+      <h1>Redaktion</h1>
+      <p class="muted">Melde dich an, um Moments direkt auf die Wall zu schicken.</p>
+    </div>
+    <div id="liveUsers" class="user-pick"></div>
+    <form id="liveLoginForm" class="p-card live-form">
+      <input id="livePw" type="password" placeholder="Passwort" autocomplete="current-password" required>
+      <button class="btn primary big">Anmelden</button>
+      <p id="liveLoginError" class="error"></p>
+    </form>
+  </main>
+
+  <!-- Kamera -->
+  <div id="liveApp" hidden>
+    <header class="p-head">
+      <div class="p-title"><small id="liveEvent">Live-Modus</small><b>Moments</b></div>
+      <a class="btn small" href="/chat">💬 Chat</a>
+      <button id="liveLogout" class="btn small" type="button">Abmelden</button>
+    </header>
+    <main class="p-main">
+      <section id="pickStep" class="live-pick">
+        <p class="muted" id="liveHello"></p>
+        <label class="live-shot">
+          <span class="live-shot-icon">📸</span><b>Foto aufnehmen</b>
+          <input type="file" accept="image/*" capture="environment" data-pick hidden>
+        </label>
+        <div class="live-row">
+          <label class="btn big">🎬 Video<input type="file" accept="video/*" capture="environment" data-pick hidden></label>
+          <label class="btn big">🖼️ Galerie<input type="file" accept="image/*,video/*" data-pick hidden></label>
+        </div>
+        <p id="approvalNote" class="muted small" hidden>Moments erscheinen erst nach Freigabe im Admin-Panel auf der Wall.</p>
+      </section>
+
+      <form id="composeStep" class="live-compose" hidden>
+        <div id="composePreview" class="live-preview"></div>
+        <textarea id="caption" maxlength="200" rows="2" placeholder="Was passiert gerade? (optional)"></textarea>
+        <div>
+          <b class="small">Hashtags</b>
+          <div id="tagChips" class="tag-chips"></div>
+          <input id="tagInput" placeholder="Eigener Hashtag, z. B. #Bühne1" autocomplete="off">
+        </div>
+        <div id="uploadBar" class="upload-progress" hidden><i></i></div>
+        <div class="live-row">
+          <button id="composeCancel" class="btn big" type="button">Verwerfen</button>
+          <button id="composeSend" class="btn primary big">Posten ➜</button>
+        </div>
+      </form>
+
+      <h2 class="p-h">Meine Moments</h2>
+      <div id="myMoments" class="live-list"></div>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="/js/common.js"></script>
+  <script src="/js/live.js"></script>
+</body>
+</html>
